@@ -15,6 +15,7 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s"
 )
 log = logging.getLogger(__name__)
+
 @manager.command("install")
 def install(package: str, local: bool = False, depends: bool = True):
     '''Installs a package.'''
@@ -27,8 +28,17 @@ def install(package: str, local: bool = False, depends: bool = True):
     log.info(f"Downloaded {package} successfully!")
     pass
 
+@manager.command("list")
+def list_packages():
+    packs = searcher.get_installed()
+    lines = [f"Total packages installed: {len(packs)}", "--------------------"]
+    for package, data in packs.items():
+        lines.append(f"{package} - {data["author"]}")
+    logging.info("\n".join(lines))
+
 @manager.command("uninstall")
 def uninstall(package: str, local: bool = False, keep_depends: bool = False):
+    '''uninstalls a package'''
     log.info('Searching for package...')
     O = (Path(os.getcwd()) if local else None)
     folder = searcher.search_package(package, O)
