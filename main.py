@@ -8,12 +8,12 @@ URL = "http://127.0.0.1:5000"
 manager = commands.CommandManager()
 #global shit
 site_packages = Path(next(x for x in sys.path if "packages" in x))
-#package = args.package
-#result = Path(__file__).parent if args.local else site_packages
 
-@manager.command("cmd")
-def _install():
-    print("inst")
+@manager.command("install")
+def _install(package: str, local: bool = False):
+    '''Installs a package.'''
+    result = Path(__file__).parent if local else site_packages
+    print("installing",package,"result",result)
     pass
 
 
