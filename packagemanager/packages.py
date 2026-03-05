@@ -2,6 +2,7 @@ from pathlib import Path
 import tempfile, zipfile, os, shutil
 
 import requests
+import packagemanager.searcher as searcher
 
 URL = "http://127.0.0.1:5000"
 def get_package(package: str, depends: bool = False) -> bytes:
@@ -38,3 +39,8 @@ def download_package(package: str, result: Path, version: str = ""):
                 print(f"Skipped {folder.name} - Not valid (file exists)")
 
         
+def remove_package(package: str):
+    pck = searcher.search_package(package)
+    if not pck:
+        raise FileNotFoundError(f"Package {package} not found!")
+    shutil.rmtree(pck)

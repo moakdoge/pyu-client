@@ -5,6 +5,7 @@ from argplus import commands
 from packagemanager import packages, searcher
 import logging
 
+
 #handle arguments
 manager = commands.CommandManager()
 #global shit
@@ -34,10 +35,18 @@ def list_packages():
     lines = [f"Total packages installed: {len(packs)}", "--------------------"]
     for package, data in packs.items():
         lines.append(f"{package} - {data["author"]}")
-    logging.info("\n".join(lines))
+    log.info("\n".join(lines))
 
+@manager.command("clean")
+def clean(confirm: bool = False):
+    if not confirm:
+        log.warning("clean will wipe every single package installed. If this is what you want, rerun this command passing --confirm")
+    pack = searcher.get_installed()
+    for package, data in pack.items():
+        packages.remove_package(package)
+        log.info(f"Removed package {package}")
 @manager.command("uninstall")
-def uninstall(package: str, local: bool = False, keep_depends: bool = False):
+def uninstall(package: str, local: bool = False,force: bool = False, keep_depends: bool = False):
     '''uninstalls a package'''
     log.info('Searching for package...')
     O = (Path(os.getcwd()) if local else None)
@@ -48,6 +57,13 @@ def uninstall(package: str, local: bool = False, keep_depends: bool = False):
     metadata = (folder / "metadata.json").read_text()
     dicted = json.loads(metadata)
     _depends = dicted.get("depends", {})
+    packs = searcher.get_installed()
+    for _package, data in packs.items():
+        for __package, _version in data.get("depends", {}).items():
+            print(__package, _package, package)
+            if __package.title().replace(" ", "") == package and not force:
+                logging.error(f"Package {_package} relies on package {package}. Pass --force to force removal despite this.")
+                return
 
     log.info(f"Removed package {folder.name}")
     shutil.rmtree(folder)
