@@ -3,17 +3,20 @@ import tempfile, zipfile, os, shutil
 
 import requests
 
-URL = "127.0.0.1"
+URL = "http://127.0.0.1:5000"
 def get_package(package: str, depends: bool = False) -> bytes:
     o=requests.get(f"{URL}/packages/{package}/download{"?depends=1" if depends else "?depends=0"}")
     o.raise_for_status()
     return o.content
 
-def download_package(package: str, version: str, result: Path):
+def download_package(package: str, result: Path, version: str = ""):
     with tempfile.TemporaryDirectory() as z:
         tmp = Path(z)
         with open(tmp / "output.zip", "wb") as f:
-            f.write(get_package(package, True))
+            if version != "":
+                f.write(get_package(package, True))
+            else:
+                f.write(get_package(package, True))
         zipped = zipfile.ZipFile(tmp / "output.zip", "r")
         zipped.extractall(tmp)
         folders: list[Path] = []
