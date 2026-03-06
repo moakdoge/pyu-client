@@ -1,4 +1,5 @@
 import argparse, requests, tempfile, zipfile, shutil, os, time,sys
+import io
 import json
 from pathlib import Path
 from argplus import commands
@@ -17,6 +18,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+
 @manager.command("install")
 def install(package: str, local: bool = False, depends: bool = True):
     '''Installs a package.'''
@@ -29,6 +31,19 @@ def install(package: str, local: bool = False, depends: bool = True):
     log.info(f"Downloaded {package} successfully!")
     pass
 
+@manager.command("update")
+def update(package: str, local: bool = False):
+    result = Path(__file__).parent if local else site_packages
+    log.info(f"Updating package {package}")
+    try:
+        packages.remove_package(package)
+        packages.download_package(package, result=result)
+    except Exception as e:
+        log.error(f"{e}. Your command has not been executed.")
+        return
+    log.info(f"Updated {package} successfully!")
+    pass
+
 @manager.command("list")
 def list_packages():
     packs = searcher.get_installed()
@@ -36,6 +51,49 @@ def list_packages():
     for package, data in packs.items():
         lines.append(f"{package} - {data["author"]}")
     log.info("\n".join(lines))
+
+@manager.command("init")
+def package_utils():
+    p = Path(os.getcwd())
+    if not (p / "__init__.py").exists():
+        log.error("Please make sure you run this command inside a python module!")
+        return
+    
+    auto_name = p.name.title().replace(" ", "")
+    real_name = input(f"[{auto_name}] Choose a name: ")
+    if real_name.strip(" ").strip("\t").strip("\n") == "":
+        real_name = auto_name
+    ver = input("[1.0.0] Version: ")
+    if ver == "":
+        ver = "1.0.0"
+    author = input("[N/A] Author: ")
+    if author == "":
+        author = "N/A"
+    with open(p / "metadata.json", "w") as m:
+        l = json.dumps({
+            "name": real_name,
+            "version": ver,
+            "author": author,
+            "depends": {}
+        }, indent=2)
+        m.write(l)
+    log.info("Successfully created metadata.json")
+
+@manager.command("upload")
+def upload_package():
+    p = Path(os.getcwd())
+    if not (p / "metadata.json").exists():
+        log.error("This directory is not a valid package! Run pyu init to make it one.")
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as z:
+        for file in Path(p).rglob("*"):
+            if file.is_file():
+                z.write(file, file.relative_to(p))
+    buffer.seek(0)
+    send = requests.post(
+    url=packages.URL + "/upload",
+    files={"file": ("package.zip", buffer)}
+    )
 
 @manager.command("clean")
 def clean(confirm: bool = False):
@@ -45,6 +103,7 @@ def clean(confirm: bool = False):
     for package, data in pack.items():
         packages.remove_package(package)
         log.info(f"Removed package {package}")
+
 @manager.command("uninstall")
 def uninstall(package: str, local: bool = False,force: bool = False, keep_depends: bool = False):
     '''uninstalls a package'''
