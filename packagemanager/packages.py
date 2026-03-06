@@ -20,6 +20,7 @@ def download_package(package: str, result: Path, version: str = ""):
                 f.write(get_package(package, True))
         zipped = zipfile.ZipFile(tmp / "output.zip", "r")
         zipped.extractall(tmp)
+        zipped.close()
         folders: list[Path] = []
         os.remove(tmp / "output.zip")
         for zipf in tmp.glob("*.zip"):
@@ -27,6 +28,7 @@ def download_package(package: str, result: Path, version: str = ""):
             d.mkdir(exist_ok=True)
             _tmp = zipfile.ZipFile(zipf, "r")
             _tmp.extractall(d)
+            _tmp.close()
             os.remove(zipf)
 
             folders.append(d)

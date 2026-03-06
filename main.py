@@ -59,7 +59,7 @@ def package_utils():
         log.error("Please make sure you run this command inside a python module!")
         return
     
-    auto_name = p.name.title().replace(" ", "")
+    auto_name = p.name.lower().replace(" ", "")
     real_name = input(f"[{auto_name}] Choose a name: ")
     if real_name.strip(" ").strip("\t").strip("\n") == "":
         real_name = auto_name
