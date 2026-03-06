@@ -19,10 +19,16 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
+
+
 @manager.command("install")
 def install(package: str, local: bool = False, depends: bool = True):
     '''Installs a package.'''
     result = Path(__file__).parent if local else site_packages
+    located = searcher.search_package(package, result)
+    if located:
+        log.error(f"Package {package} is already installed!")
+        return
     log.info(f"Installing package {package} to {result}")
     try:
         packages.download_package(package, result=result)
