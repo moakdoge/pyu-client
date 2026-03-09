@@ -1,6 +1,6 @@
 import argparse, inspect
 from typing import Any
-class CommandManager:
+class CommandManager:#men
     def __init__(self):
         self._cmds = {}
         self._parser = argparse.ArgumentParser("pyu")

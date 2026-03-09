@@ -14,38 +14,36 @@ def get_package(package: str, depends: bool = False) -> bytes:
     return o.content
 
 def download_package(package: str, result: Path, version: str = ""):
-    with Console().status(status=f"Installing package {package}..", spinner="dots") as con:
-        con.start()
-        with tempfile.TemporaryDirectory() as z:
-            tmp = Path(z)
-            with open(tmp / "output.zip", "wb") as f:
-                if version != "":
-                    f.write(get_package(package, True))
-                else:
-            
-                    f.write(get_package(package, True))
+    with tempfile.TemporaryDirectory() as z:
+        tmp = Path(z)
+        with open(tmp / "output.zip", "wb") as f:
+            if version != "":
+                f.write(get_package(package, True))
+            else:
+        
+                f.write(get_package(package, True))
 
-            with zipfile.ZipFile(tmp / "output.zip", "r") as zipped:
-                zipped.extractall(tmp)
+        with zipfile.ZipFile(tmp / "output.zip", "r") as zipped:
+            zipped.extractall(tmp)
 
-            folders: list[Path] = []
-            os.remove(tmp / "output.zip")
-            for zipf in tmp.glob("*.zip"):
-                d = (tmp / f"{zipf.name.rstrip(".zip").split("-")[0]}")
-                d.mkdir(exist_ok=True)
-                with zipfile.ZipFile(zipf, "r") as _tmp:
-                    _tmp.extractall(d)
-                os.remove(zipf)
+        folders: list[Path] = []
+        os.remove(tmp / "output.zip")
+        for zipf in tmp.glob("*.zip"):
+            d = (tmp / f"{zipf.name.rstrip(".zip").split("-")[0]}")
+            d.mkdir(exist_ok=True)
+            with zipfile.ZipFile(zipf, "r") as _tmp:
+                _tmp.extractall(d)
+            os.remove(zipf)
 
-                folders.append(d)
-            for folder in folders:
-                result_path = (result.absolute() / folder.name)
-                if not result_path.exists():
-                    shutil.copytree(folder.absolute(), result.absolute() / folder.name)
-                    continue
-                else:
-                    pass
-                   # print(f"Skipped {folder.name} - Not valid (file exists)")
+            folders.append(d)
+        for folder in folders:
+            result_path = (result.absolute() / folder.name)
+            if not result_path.exists():
+                shutil.copytree(folder.absolute(), result.absolute() / folder.name)
+                continue
+            else:
+                pass
+                # print(f"Skipped {folder.name} - Not valid (file exists)")
 
         
 def remove_package(package: str):
