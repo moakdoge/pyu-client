@@ -3,8 +3,10 @@ import io
 import json
 from pathlib import Path
 from argplus import commands
-from packagemanager import packages, searcher
+from packagemanager import packages, searcher, loggerpy
 import logging
+from rich.console import Console 
+
 
 
 #handle arguments
@@ -37,18 +39,26 @@ def install(package: str, local: bool = False, depends: bool = True):
     log.info(f"Downloaded {package} successfully!")
     pass
 
+@manager.command("test-logging")
+def test_log():
+    log.info("This is an example of info text!")
+    log.warning("This is an example of warning text!")
+    log.error("This is an example of logging error!")
+
 @manager.command("update")
 def update(package: str, local: bool = False):
-    result = Path(__file__).parent if local else site_packages
-    log.info(f"Updating package {package}")
-    try:
-        packages.remove_package(package)
-        packages.download_package(package, result=result)
-    except Exception as e:
-        log.error(f"{e}. Your command has not been executed.")
-        return
+    with Console().status(status=f"Updating package {package}..", spinner="dots") as con:
+        result = Path(__file__).parent if local else site_packages
+        con.update(status=f"Updating package {package}")
+        try:
+            packages.remove_package(package)
+            packages.download_package(package, result=result)
+        except Exception as e:
+            log.error(f"{e}")
+            return
+
     log.info(f"Updated {package} successfully!")
-    pass
+
 
 @manager.command("list")
 def list_packages():
@@ -100,11 +110,15 @@ def upload_package():
     url=packages.URL + "/upload",
     files={"file": ("package.zip", buffer)}
     )
-
+    if send.ok:
+        log.info("Successfully uploaded package!")
+    else:
+        log.error(f"Failed to upload package! (Error {send.status_code}, '{send.json()["detail"]}')")
 @manager.command("clean")
 def clean(confirm: bool = False):
     if not confirm:
         log.warning("clean will wipe every single package installed. If this is what you want, rerun this command passing --confirm")
+        return
     pack = searcher.get_installed()
     for package, data in pack.items():
         packages.remove_package(package)
@@ -125,8 +139,7 @@ def uninstall(package: str, local: bool = False,force: bool = False, keep_depend
     packs = searcher.get_installed()
     for _package, data in packs.items():
         for __package, _version in data.get("depends", {}).items():
-            print(__package, _package, package)
-            if __package.title().replace(" ", "") == package and not force:
+            if __package == package and not force:
                 logging.error(f"Package {_package} relies on package {package}. Pass --force to force removal despite this.")
                 return
 
