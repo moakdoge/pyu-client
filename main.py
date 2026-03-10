@@ -16,12 +16,9 @@ p = Path(os.getcwd())
 #global shit
 site_packages = Path(next(x for x in sys.path if "packages" in x))
 
-@manager.after_command()
-def after(ct: ctx.CommandContext):
-    print(ct.return_code)
 
 
-@manager.command("install")
+@manager.register("install")
 def install(package: str, local: bool = False):
     '''Installs a package.'''
     
@@ -41,13 +38,13 @@ def install(package: str, local: bool = False):
         pass
     
 
-@manager.command("debug", "logging")
+@manager.register("debug", "logging")
 def test_log():
     debug.info("This is an example of info text!")
     debug.warning("This is an example of warning text!")
     debug.error("This is an example of logging error!")
 
-@manager.command("update")
+@manager.register("update")
 def update(package: str, local: bool = False):
     '''Updates a specific package.'''
     with console.status(status=f"Updating package {package}..", spinner="dots") as con:
@@ -63,7 +60,7 @@ def update(package: str, local: bool = False):
     debug.info(f"Updated {package} successfully!")
 
 
-@manager.command("list")
+@manager.register("list")
 def list_packages():
     packs = searcher.get_installed()
     lines = [f"Total packages installed: {len(packs)}", "--------------------"]
@@ -71,7 +68,7 @@ def list_packages():
         lines.append(f"{package} - {data["author"]}")
     debug.info("\n".join(lines))
 
-@manager.command("package", "bump")
+@manager.register("package", "bump")
 def package_bump():
     '''Ups the version of the current package up by one. For example, 1.2.3 -> 1.2.4'''
     
@@ -98,7 +95,7 @@ def package_bump():
         f.write(json.dumps(j, indent=1))
     return
 
-@manager.command("package", "init")
+@manager.register("package", "init")
 def package_init():
     '''Creates a brand new package in the current directory.'''
     if not (p / "__init__.py").exists():
@@ -140,7 +137,7 @@ def package_init():
     
     debug.info("Successfully created metadata.json")
 
-@manager.command("package", "publish")
+@manager.register("package", "publish")
 def upload_package():
     '''Uploads a package over to the server.'''
     if not (p / "metadata.json").exists():
@@ -165,13 +162,13 @@ def upload_package():
         else:
             debug.error(f"Failed to publish package! (Error {send.status_code}, '{send.json()["detail"]}')")
 
-@manager.command("package", "bp", aliases=["release", "bump-publish"])
+@manager.register("package", "bp", aliases=["release", "bump-publish"])
 def bp():
     '''Will automatically bump the package and publish it.'''
     manager.run("package", "bump")
     manager.run("package", "publish")
 
-@manager.command("clean")
+@manager.register("clean")
 def clean(confirm: bool = False):
     '''Wipes all installed packages.'''
     if not confirm:
@@ -182,7 +179,7 @@ def clean(confirm: bool = False):
         packages.remove_package(package)
         debug.info(f"Removed package {package}")
 
-@manager.command("uninstall")
+@manager.register("uninstall")
 def uninstall(package: str, local: bool = False,force: bool = False, keep_depends: bool = False):
     '''Uninstalls a package'''
     debug.info('Searching for package...')
@@ -211,8 +208,10 @@ def uninstall(package: str, local: bool = False,force: bool = False, keep_depend
                 shutil.rmtree(fold)
                 debug.info(f"Removed dependency of {fold}")
 
-@manager.command("test", "command")
-def test_command():
+@manager.register("test", "command")
+def test_command(arg1: bool = False):
+    if arg1:
+        raise commands.CommandException(status_code=1, status_message="bruh")
     pass
 if __name__ == "__main__":
     manager.process_commands()

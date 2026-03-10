@@ -25,7 +25,7 @@ class CommandManager:
 
     
     
-    def command(self, cmd: str, subcmd: str | None = None, aliases: list[str] | None = None, private: bool = False):
+    def register(self, cmd: str, subcmd: str | None = None, aliases: list[str] | None = None, private: bool = False):
         def decorator(fn):
 
             if subcmd is None:
@@ -90,10 +90,13 @@ class CommandManager:
                     returned = before(ctx)
                     if returned is not None:
                         _ = returned
-                if _ != fn:
-                    r= _(*params)
-                else:
-                    r= fn(*params)
+                try:
+                    if _ != fn:
+                        r= _(*params)
+                    else:
+                        r= fn(*params)
+                except CommandException as e:
+                    r = e.code
                 try:
                     if r is None:
                         ctx.return_code = 0
@@ -113,8 +116,7 @@ class CommandManager:
             
             except KeyboardInterrupt:
                 pass
-            except CommandException as e:
-                return e.code
+
         else:
             if args.command in self._groups and getattr(args, "subcommand", None) is None:
                 self._groups[args.command].print_help()
@@ -143,3 +145,22 @@ class CommandManager:
             self._after.append(fn)
             return fn
         return decorator
+
+    @property
+    def commands(self) -> list:
+        return list(self._cmds.values())
+    
+    def __len__(self):
+        return len(self.commands)
+    
+    def __repr__(self) -> str:
+        return f"<CommandManager name='{self._parser.prog}', commands={len(self.commands)}>"
+    
+    def __str__(self) -> str:
+        proper = []
+        for _cmd, _val in self._cmds.items():
+            if isinstance(_cmd, tuple):
+                proper.append(f"{_cmd[0]} {_cmd[1]}")
+            else:
+                proper.append(f"{_cmd}")
+        return f"<CommandManager {self._parser.prog}({", ".join(proper)})>"
