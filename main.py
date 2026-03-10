@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse, requests, tempfile, zipfile, shutil, os, time,sys
 import io
 import json

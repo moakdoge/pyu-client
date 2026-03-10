@@ -56,3 +56,8 @@ class CommandManager:
                 fn(*params)
             except KeyboardInterrupt:
                 pass
+        else:
+            if args.command in self._groups and getattr(args, "subcommand", None) is None:
+                self._groups[args.command].print_help()
+            else:
+                self._parser.print_help()
