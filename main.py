@@ -63,12 +63,33 @@ def list_packages():
     debug.info("\n".join(lines))
 
 @manager.command("init")
-def package_utils():
+def package_utils(update: bool = False):
     p = Path(os.getcwd())
     if not (p / "__init__.py").exists():
         debug.error("Please make sure you run this command inside a python module!")
         return
     
+    if update:
+        if not (p / "metadata.json").exists():
+            debug.error(f"Please make sure this is a package before calling --update!")
+            return
+        j = json.loads((p / "metadata.json").read_text())
+        part1, part2, part3 = j["version"].split(".")
+        part1 = int(part1)
+        part2 = int(part2)
+        part3 = int(part3)
+        
+        part3 += 1
+        if part3 >= 10:
+            part3 = 0
+            part2 += 1
+            if part2 >= 10:
+                part1 += 1
+        debug.info(f"New version applied: {part1}.{part2}.{part3}")
+        j["version"] = f"{part1}.{part2}.{part3}"
+        with open((p / "metadata.json"), "w") as f:
+            f.write(json.dumps(j, indent=1))
+        return
     auto_name = p.name.lower().replace(" ", "")
     real_name = input(f"[{auto_name}] Choose a name: ")
     if real_name.strip(" ").strip("\t").strip("\n") == "":
