@@ -6,6 +6,12 @@ from . import ctx as ct
 import os
 
 
+class CommandException(BaseException):
+    def __init__(self, status_code: int, status_message: str) -> None:
+        self.code = status_code
+        self.message = status_message
+        super().__init__(f"Command raised exception (Status code {status_code}): {status_message}")
+        
 class CommandManager:
     def __init__(self, name: str | None = None, description: str = ""):
         os.environ["CommandManagerCreated"] = "1"
@@ -19,7 +25,7 @@ class CommandManager:
 
     
     
-    def command(self, cmd: str, subcmd: str | None = None, aliases: list[str] | None = None):
+    def command(self, cmd: str, subcmd: str | None = None, aliases: list[str] | None = None, private: bool = False):
         def decorator(fn):
 
             if subcmd is None:
@@ -50,15 +56,15 @@ class CommandManager:
                 else:
                     if param.annotation is bool:
                         if param.default:
-                            p.add_argument("--no-"+name, action="store_false", dest=name, default=param.default, help=f"(default: {str(param.default)})")
+                            p.add_argument("--no-"+name, action="store_false", dest=name, default=param.default, help=f"(default: {str(param.default)})"if not private else argparse.SUPPRESS)
                         else:
-                            p.add_argument("--"+name, action="store_true", default=param.default, help=f"(default: {str(param.default)})")
+                            p.add_argument("--"+name, action="store_true", default=param.default, help=f"(default: {str(param.default)})" if not private else argparse.SUPPRESS)
                     else:
-                        p.add_argument("--"+name, default=param.default, type=anno, help=f"(default: {str(param.default)})")
+                        p.add_argument("--"+name, default=param.default, type=anno, help=f"(default: {str(param.default)})"if not private else argparse.SUPPRESS)
 
             return fn
         return decorator
-    def process_commands(self, argv: list | None = None):
+    def process_commands(self, argv: list | None = None) -> int:
         args = self._parser.parse_args(argv or sys.argv[1:])
         os.environ["CommandManagerCalled"] = "1"
         if hasattr(args, "subcommand") and args.subcommand:
@@ -66,7 +72,7 @@ class CommandManager:
         else:
             if args.command in self._groups and getattr(args, "subcommand", None) is None:
                 self._groups[args.command].print_help()
-                return
+                return 1
             fn = self._cmds.get(args.command)
 
         if fn:
@@ -85,25 +91,39 @@ class CommandManager:
                     if returned is not None:
                         _ = returned
                 if _ != fn:
-                    _(*params)
+                    r= _(*params)
                 else:
-                    fn(*params)
+                    r= fn(*params)
+                try:
+                    if r is None:
+                        ctx.return_code = 0
+                    else:
+                        ctx.return_code= int(r)
+                except ValueError:
+                    raise ValueError(f"Return must be either None or int!")
+
                 for after in self._after:
-                    if hasattr(after, "_cmds"):
+                    if hasattr(after, "_cmds") and after._cmds:
                         if args.command not in after._cmds and (args.command, getattr(args, "subcommand", None)) not in after._cmds:
                             continue
+
                     aftered = after(ctx)
 
+                return ctx.return_code
+            
             except KeyboardInterrupt:
                 pass
+            except CommandException as e:
+                return e.code
         else:
             if args.command in self._groups and getattr(args, "subcommand", None) is None:
                 self._groups[args.command].print_help()
             else:
                 self._parser.print_help()
-                
-    def run(self, *commands: str):
-        self.process_commands(list(commands)) 
+        return 1
+    
+    def run(self, *commands: str) -> int:
+        return self.process_commands(list(commands)) 
     
     def get(self, command: str | tuple[str, str]):
         if command in self._cmds:

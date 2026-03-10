@@ -16,7 +16,9 @@ p = Path(os.getcwd())
 #global shit
 site_packages = Path(next(x for x in sys.path if "packages" in x))
 
-
+@manager.after_command()
+def after(ct: ctx.CommandContext):
+    print(ct.return_code)
 
 
 @manager.command("install")
@@ -37,6 +39,7 @@ def install(package: str, local: bool = False):
 
         debug.info(f"Downloaded {package} successfully!")
         pass
+    
 
 @manager.command("debug", "logging")
 def test_log():
@@ -208,5 +211,8 @@ def uninstall(package: str, local: bool = False,force: bool = False, keep_depend
                 shutil.rmtree(fold)
                 debug.info(f"Removed dependency of {fold}")
 
+@manager.command("test", "command")
+def test_command():
+    pass
 if __name__ == "__main__":
     manager.process_commands()
