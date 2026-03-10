@@ -11,7 +11,7 @@ import readline
 
 
 #handle arguments
-manager = commands.CommandManager()
+manager = commands.CommandManager("pyu")
 p = Path(os.getcwd())
 #global shit
 site_packages = Path(next(x for x in sys.path if "packages" in x))
@@ -160,6 +160,12 @@ def upload_package():
             debug.error(f"Failed to publish package! {send.json()["detail"]}")
         else:
             debug.error(f"Failed to publish package! (Error {send.status_code}, '{send.json()["detail"]}')")
+
+@manager.command("package", "bp", aliases=["release", "bump-publish"])
+def bp():
+    '''Will automatically bump the package and publish it.'''
+    package_bump()
+    upload_package()
 
 @manager.command("clean")
 def clean(confirm: bool = False):

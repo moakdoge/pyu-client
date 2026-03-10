@@ -16,7 +16,7 @@ def get_package(package: str, depends: bool = False) -> bytes:
     o.raise_for_status()
     return o.content
 
-def install_pip_package(req: Path, local: Path) -> list[subprocess.Popen]:
+def install_pip_package(req: Path, local: Path | None = None) -> list[subprocess.Popen]:
     procs = []
 
     with open(req) as f:
@@ -25,8 +25,9 @@ def install_pip_package(req: Path, local: Path) -> list[subprocess.Popen]:
             if not pkg or pkg.startswith("#"):
                 continue
 
-            target = (local / pkg).resolve()
-            target.mkdir(parents=True, exist_ok=True)
+            if local is not None:
+                target = (local / pkg).resolve()
+                target.mkdir(parents=True, exist_ok=True)
 
             args = [
                 sys.executable,
@@ -34,9 +35,11 @@ def install_pip_package(req: Path, local: Path) -> list[subprocess.Popen]:
                 "pip",
                 "install",
                 pkg,
-                "--target",
-                str(target)
             ]
+            if local is not None:
+                args.append("--target")
+                args.append(str(target.absolute().resolve()))
+
 
             procs.append(
                 subprocess.Popen(
@@ -71,6 +74,7 @@ def download_package(package: str, result: Path, version: str = ""):
             d.mkdir(exist_ok=True)
             with zipfile.ZipFile(zipf, "r") as _tmp:
                 _tmp.extractall(d)
+
             r=(d / "requirements.txt")
             if r.exists():
                 _=result
@@ -79,8 +83,8 @@ def download_package(package: str, result: Path, version: str = ""):
                 k=install_pip_package(r, local=_)
                 for proc in k:
                     proc.wait()
-            os.remove(zipf)
 
+            os.remove(zipf)
             folders.append(d)
         for folder in folders:
             result_path = (result.absolute() / folder.name)
