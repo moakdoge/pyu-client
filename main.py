@@ -35,7 +35,7 @@ def install(package: str, local: bool = False):
         debug.info(f"Downloaded {package} successfully!")
         pass
 
-@manager.command("test-logging")
+@manager.command("debug", "logging")
 def test_log():
     debug.info("This is an example of info text!")
     debug.warning("This is an example of warning text!")
@@ -124,27 +124,35 @@ def package_init():
         m.write(l)
     debug.info("Successfully created metadata.json")
 
-@manager.command("upload")
+@manager.command("package", "publish")
 def upload_package():
+    '''Uploads a package over to the server.'''
     p = Path(os.getcwd())
     if not (p / "metadata.json").exists():
         debug.error("This directory is not a valid package! Run pyu init to make it one.")
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w") as z:
-        for file in Path(p).rglob("*"):
-            if file.is_file():
-                z.write(file, file.relative_to(p))
-    buffer.seek(0)
-    send = requests.post(
-    url=packages.URL + "/upload",
-    files={"file": ("package.zip", buffer)}
-    )
-    if send.ok:
-        debug.info("Successfully uploaded package!")
-    else:
-        debug.error(f"Failed to upload package! (Error {send.status_code}, '{send.json()["detail"]}')")
+    
+    name = json.loads((p / "metadata.json").read_text()).get("name")
+    with console.status(status=f"Publishing {name}..."):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as z:
+            for file in Path(p).rglob("*"):
+                if file.is_file():
+                    z.write(file, file.relative_to(p))
+        buffer.seek(0)
+        send = requests.post(
+            url=packages.URL + "/upload",
+            files={"file": ("package.zip", buffer)}
+        )
+        if send.ok:
+            debug.info("Successfully published package!")
+        elif send.status_code == 409:
+            debug.error(f"Failed to publish package! {send.json()["detail"]}")
+        else:
+            debug.error(f"Failed to publish package! (Error {send.status_code}, '{send.json()["detail"]}')")
+
 @manager.command("clean")
 def clean(confirm: bool = False):
+    '''Wipes all installed packages.'''
     if not confirm:
         debug.warning("clean will wipe every single package installed. If this is what you want, rerun this command passing --confirm")
         return
@@ -155,7 +163,7 @@ def clean(confirm: bool = False):
 
 @manager.command("uninstall")
 def uninstall(package: str, local: bool = False,force: bool = False, keep_depends: bool = False):
-    '''uninstalls a package'''
+    '''Uninstalls a package'''
     debug.info('Searching for package...')
     O = (Path(os.getcwd()) if local else None)
     folder = searcher.search_package(package, O)
@@ -182,4 +190,5 @@ def uninstall(package: str, local: bool = False,force: bool = False, keep_depend
                 shutil.rmtree(fold)
                 debug.info(f"Removed dependency of {fold}")
 
-manager.process_commands()
+if __name__ == "__main__":
+    manager.process_commands()
