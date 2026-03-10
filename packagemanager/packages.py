@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 import time
 import tempfile, zipfile, os, shutil
 
@@ -13,6 +14,21 @@ def get_package(package: str, depends: bool = False) -> bytes:
     o.raise_for_status()
     return o.content
 
+def install_pip_package(req: Path, local: Path | None = None):
+    import subprocess, sys
+    args=[
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "-r",
+        str(req.absolute().resolve())
+    ]
+    if local is not None:
+        args.append("--target")
+        args.append(str(local.absolute().resolve()))
+    r = subprocess.run(args, check=True)
+site_packages = Path(next(x for x in sys.path if "packages" in x))
 def download_package(package: str, result: Path, version: str = ""):
     with tempfile.TemporaryDirectory() as z:
         tmp = Path(z)
@@ -33,6 +49,12 @@ def download_package(package: str, result: Path, version: str = ""):
             d.mkdir(exist_ok=True)
             with zipfile.ZipFile(zipf, "r") as _tmp:
                 _tmp.extractall(d)
+            r=(d / "requirements.txt")
+            if r.exists():
+                _=result
+                if result == site_packages:
+                    _ = None
+                install_pip_package(r, local=_)
             os.remove(zipf)
 
             folders.append(d)
