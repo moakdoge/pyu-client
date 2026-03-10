@@ -62,7 +62,7 @@ def list_packages():
         lines.append(f"{package} - {data["author"]}")
     debug.info("\n".join(lines))
 
-@manager.command("init")
+@manager.command("package", "init")
 def package_utils(update: bool = False):
     p = Path(os.getcwd())
     if not (p / "__init__.py").exists():
