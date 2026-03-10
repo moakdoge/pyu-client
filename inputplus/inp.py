@@ -1,4 +1,4 @@
-import sys
+import re
 
 
 def ask(prompt: str = "", preferred: bool = True) -> bool:
@@ -12,3 +12,8 @@ def ask(prompt: str = "", preferred: bool = True) -> bool:
             return preferred
 
     return (_x.lower() in allowed_yess)
+
+
+def validate_version(version: str = ""):
+    r = r'^\d+\.\d+\.\d+$'
+    return bool(re.compile(r).match(version))

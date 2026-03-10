@@ -108,9 +108,15 @@ def package_init():
     real_name = input(f"[{auto_name}] Choose a name: ")
     if real_name.strip(" ").strip("\t").strip("\n") == "":
         real_name = auto_name
-    ver = input("[1.0.0] Version: ")
-    if ver == "":
-        ver = "1.0.0"
+    ver = ""
+    while True:
+        ver = input("[1.0.0] Version: ")
+        if ver == "":
+            ver = "1.0.0"
+        if inp.validate_version(ver):
+            break
+        print("Invalid version! Versions MUST be in this format: major.minor.patch")
+    
     author = input("[N/A] Author: ")
     if author == "":
         author = "N/A"
