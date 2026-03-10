@@ -8,14 +8,15 @@ import packagemanager.searcher as searcher
 import rich
 from rich.spinner import Spinner
 from rich.console import Console 
+from loggingplus import *
+import subprocess, sys
 URL = "http://127.0.0.1:5000"
 def get_package(package: str, depends: bool = False) -> bytes:
     o=requests.get(f"{URL}/packages/{package}/download{"?depends=1" if depends else "?depends=0"}")
     o.raise_for_status()
     return o.content
 
-def install_pip_package(req: Path, local: Path | None = None):
-    import subprocess, sys
+def install_pip_package(req: Path, local: Path | None = None) -> subprocess.Popen:
     args=[
         sys.executable,
         "-m",
@@ -27,7 +28,7 @@ def install_pip_package(req: Path, local: Path | None = None):
     if local is not None:
         args.append("--target")
         args.append(str(local.absolute().resolve()))
-    r = subprocess.run(args, check=True)
+    return subprocess.Popen(args=args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT, text=True, bufsize=1)
 site_packages = Path(next(x for x in sys.path if "packages" in x))
 def download_package(package: str, result: Path, version: str = ""):
     with tempfile.TemporaryDirectory() as z:
@@ -54,7 +55,10 @@ def download_package(package: str, result: Path, version: str = ""):
                 _=result
                 if result == site_packages:
                     _ = None
-                install_pip_package(r, local=_)
+                k=install_pip_package(r, local=_)
+                if k:
+                    for line in k.stdout: 
+                        debug.info(line)
             os.remove(zipf)
 
             folders.append(d)
