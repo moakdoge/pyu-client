@@ -1,6 +1,8 @@
 import inspect, argparse
 from pathlib import Path
 import atexit
+import sys
+from . import ctx as ct
 import os
 
 
@@ -12,6 +14,8 @@ class CommandManager:
         self._parser = argparse.ArgumentParser(__n, description=description,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         self._sub = self._parser.add_subparsers(dest="command")
         self._groups = {}
+        self._before = []
+        self._after = []
 
     
     
@@ -54,8 +58,8 @@ class CommandManager:
 
             return fn
         return decorator
-    def process_commands(self):
-        args = self._parser.parse_args()
+    def process_commands(self, argv: list | None = None):
+        args = self._parser.parse_args(argv or sys.argv[1:])
         os.environ["CommandManagerCalled"] = "1"
         if hasattr(args, "subcommand") and args.subcommand:
             fn = self._cmds.get((args.command, args.subcommand))
@@ -70,7 +74,26 @@ class CommandManager:
             for name in inspect.signature(fn).parameters:
                 params.append(getattr(args, name))
             try:
-                fn(*params)
+                __back = fn
+                _ = fn
+                ctx = ct.CommandContext(command=args.command, args=args, func=fn)
+                for before in self._before:
+                    if hasattr(before, "_cmds"):
+                        if args.command not in before._cmds and (args.command, getattr(args, "subcommand", None)) not in before._cmds:
+                            continue
+                    returned = before(ctx)
+                    if returned is not None:
+                        _ = returned
+                if _ != fn:
+                    _(*params)
+                else:
+                    fn(*params)
+                for after in self._after:
+                    if hasattr(after, "_cmds"):
+                        if args.command not in after._cmds and (args.command, getattr(args, "subcommand", None)) not in after._cmds:
+                            continue
+                    aftered = after(ctx)
+
             except KeyboardInterrupt:
                 pass
         else:
@@ -79,3 +102,24 @@ class CommandManager:
             else:
                 self._parser.print_help()
                 
+    def run(self, *commands: str):
+        self.process_commands(list(commands)) 
+    
+    def get(self, command: str | tuple[str, str]):
+        if command in self._cmds:
+            return self._cmds[command]
+        return None 
+
+    def before_command(self, *commands: str):
+        def decorator(fn):
+            fn._cmds = commands
+            self._before.append(fn)
+            return fn
+        return decorator
+    
+    def after_command(self, *commands: str):
+        def decorator(fn):
+            fn._cmds = commands
+            self._after.append(fn)
+            return fn
+        return decorator

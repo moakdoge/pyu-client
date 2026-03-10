@@ -3,7 +3,7 @@ import argparse, requests, tempfile, zipfile, shutil, os, time,sys
 import io
 import json
 from pathlib import Path
-from argplus import commands
+from argplus import commands, ctx
 from loggingplus import *
 from packagemanager import packages, searcher
 from inputplus import inp
@@ -46,6 +46,7 @@ def test_log():
 
 @manager.command("update")
 def update(package: str, local: bool = False):
+    '''Updates a specific package.'''
     with console.status(status=f"Updating package {package}..", spinner="dots") as con:
         result = Path(__file__).parent if local else site_packages
         con.update(status=f"Updating package {package}")
@@ -164,8 +165,8 @@ def upload_package():
 @manager.command("package", "bp", aliases=["release", "bump-publish"])
 def bp():
     '''Will automatically bump the package and publish it.'''
-    package_bump()
-    upload_package()
+    manager.run("package", "bump")
+    manager.run("package", "publish")
 
 @manager.command("clean")
 def clean(confirm: bool = False):
