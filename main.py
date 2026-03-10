@@ -5,6 +5,8 @@ from pathlib import Path
 from argplus import commands
 from loggingplus import *
 from packagemanager import packages, searcher
+from inputplus import inp
+import readline
 
 
 #handle arguments
@@ -62,34 +64,46 @@ def list_packages():
         lines.append(f"{package} - {data["author"]}")
     debug.info("\n".join(lines))
 
+@manager.command("package", "bump")
+def package_bump():
+    '''Ups the version of the current package up by one. For example, 1.2.3 -> 1.2.4'''
+    p = Path(os.getcwd())
+    if not (p / "metadata.json").exists():
+        debug.error(f"Please make sure this is a package before calling --update!")
+        return
+    j = json.loads((p / "metadata.json").read_text())
+    part1, part2, part3 = j["version"].split(".")
+    old = j["version"]
+    part1 = int(part1)
+    part2 = int(part2)
+    part3 = int(part3)
+    
+    part3 += 1
+    if part3 >= 10:
+        part3 = 0
+        part2 += 1
+        if part2 >= 10:
+            part1 += 1
+        
+    debug.info(f"Version: {old} -> {part1}.{part2}.{part3}")
+    j["version"] = f"{part1}.{part2}.{part3}"
+    with open((p / "metadata.json"), "w") as f:
+        f.write(json.dumps(j, indent=1))
+    return
+
 @manager.command("package", "init")
-def package_utils(update: bool = False):
+def package_init():
+    '''Creates a brand new package in the current directory.'''
     p = Path(os.getcwd())
     if not (p / "__init__.py").exists():
         debug.error("Please make sure you run this command inside a python module!")
         return
-    
-    if update:
-        if not (p / "metadata.json").exists():
-            debug.error(f"Please make sure this is a package before calling --update!")
+    if (p / "metadata.json").exists():
+        cont = inp.ask("Are you sure you would like to overwrite this project? All settings will be lost!", preferred=False)
+        if not cont:
             return
-        j = json.loads((p / "metadata.json").read_text())
-        part1, part2, part3 = j["version"].split(".")
-        part1 = int(part1)
-        part2 = int(part2)
-        part3 = int(part3)
-        
-        part3 += 1
-        if part3 >= 10:
-            part3 = 0
-            part2 += 1
-            if part2 >= 10:
-                part1 += 1
-        debug.info(f"New version applied: {part1}.{part2}.{part3}")
-        j["version"] = f"{part1}.{part2}.{part3}"
-        with open((p / "metadata.json"), "w") as f:
-            f.write(json.dumps(j, indent=1))
-        return
+    
+    
     auto_name = p.name.lower().replace(" ", "")
     real_name = input(f"[{auto_name}] Choose a name: ")
     if real_name.strip(" ").strip("\t").strip("\n") == "":
