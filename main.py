@@ -12,6 +12,7 @@ import readline
 
 #handle arguments
 manager = commands.CommandManager()
+p = Path(os.getcwd())
 #global shit
 site_packages = Path(next(x for x in sys.path if "packages" in x))
 
@@ -21,8 +22,9 @@ site_packages = Path(next(x for x in sys.path if "packages" in x))
 @manager.command("install")
 def install(package: str, local: bool = False):
     '''Installs a package.'''
+    
     with console.status(status=f"Installing {package}...", spinner="dots"):
-        result = Path(__file__).parent if local else site_packages
+        result = p if local else site_packages
         located = searcher.search_package(package, result)
         if located:
             debug.error(f"Package {package} is already installed!")
@@ -68,7 +70,7 @@ def list_packages():
 @manager.command("package", "bump")
 def package_bump():
     '''Ups the version of the current package up by one. For example, 1.2.3 -> 1.2.4'''
-    p = Path(os.getcwd())
+    
     if not (p / "metadata.json").exists():
         debug.error(f"Please make sure this is a package before calling --update!")
         return
@@ -95,7 +97,6 @@ def package_bump():
 @manager.command("package", "init")
 def package_init():
     '''Creates a brand new package in the current directory.'''
-    p = Path(os.getcwd())
     if not (p / "__init__.py").exists():
         debug.error("Please make sure you run this command inside a python module!")
         return
@@ -121,20 +122,23 @@ def package_init():
     author = input("[N/A] Author: ")
     if author == "":
         author = "N/A"
+    descr = input("Description:")
     with open(p / "metadata.json", "w") as m:
         l = json.dumps({
             "name": real_name,
             "version": ver,
             "author": author,
-            "depends": {}
+            "depends": {},
+            "description": descr,
+            "language": "python"
         }, indent=2)
         m.write(l)
+    
     debug.info("Successfully created metadata.json")
 
 @manager.command("package", "publish")
 def upload_package():
     '''Uploads a package over to the server.'''
-    p = Path(os.getcwd())
     if not (p / "metadata.json").exists():
         debug.error("This directory is not a valid package! Run pyu init to make it one.")
     
@@ -172,7 +176,7 @@ def clean(confirm: bool = False):
 def uninstall(package: str, local: bool = False,force: bool = False, keep_depends: bool = False):
     '''Uninstalls a package'''
     debug.info('Searching for package...')
-    O = (Path(os.getcwd()) if local else None)
+    O = (p if local else None)
     folder = searcher.search_package(package, O)
     if not folder:
         debug.error(f"Could not find package {package}!")

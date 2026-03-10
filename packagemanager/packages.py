@@ -16,19 +16,40 @@ def get_package(package: str, depends: bool = False) -> bytes:
     o.raise_for_status()
     return o.content
 
-def install_pip_package(req: Path, local: Path | None = None) -> subprocess.Popen:
-    args=[
-        sys.executable,
-        "-m",
-        "pip",
-        "install",
-        "-r",
-        str(req.absolute().resolve())
-    ]
-    if local is not None:
-        args.append("--target")
-        args.append(str(local.absolute().resolve()))
-    return subprocess.Popen(args=args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT, text=True, bufsize=1)
+def install_pip_package(req: Path, local: Path) -> list[subprocess.Popen]:
+    procs = []
+
+    with open(req) as f:
+        for line in f:
+            pkg = line.strip()
+            if not pkg or pkg.startswith("#"):
+                continue
+
+            target = (local / pkg).resolve()
+            target.mkdir(parents=True, exist_ok=True)
+
+            args = [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                pkg,
+                "--target",
+                str(target)
+            ]
+
+            procs.append(
+                subprocess.Popen(
+                    args,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1
+                )
+            )
+
+    return procs
+
 site_packages = Path(next(x for x in sys.path if "packages" in x))
 def download_package(package: str, result: Path, version: str = ""):
     with tempfile.TemporaryDirectory() as z:
@@ -56,9 +77,8 @@ def download_package(package: str, result: Path, version: str = ""):
                 if result == site_packages:
                     _ = None
                 k=install_pip_package(r, local=_)
-                if k:
-                    for line in k.stdout: 
-                        debug.info(line)
+                for proc in k:
+                    proc.wait()
             os.remove(zipf)
 
             folders.append(d)
