@@ -10,11 +10,16 @@ from rich.spinner import Spinner
 from rich.console import Console 
 from loggingplus import *
 import subprocess, sys
-URL = "http://127.0.0.1:5000"
+URL = "http://moakdoge-laptop.local:5000"
 def get_package(package: str, depends: bool = False) -> bytes:
     o=requests.get(f"{URL}/packages/{package}/download{"?depends=1" if depends else "?depends=0"}")
     o.raise_for_status()
     return o.content
+
+def search_package(package: str):
+    o = requests.get(f"{URL}/packages/{package}/cache")
+    o.raise_for_status
+    return o.json()
 
 def install_pip_package(req: Path, local: Path | None = None) -> list[subprocess.Popen]:
     procs = []

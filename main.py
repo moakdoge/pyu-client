@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from argplus import commands, ctx
 from loggingplus import *
-from packagemanager import packages, searcher
+from packagemanager import packages, searcher, version
 from inputplus import inp
 import readline
 
@@ -15,8 +15,7 @@ manager = commands.CommandManager("pyu")
 p = Path(os.getcwd())
 #global shit
 site_packages = Path(next(x for x in sys.path if "packages" in x))
-
-
+deb = manager.group("package")
 
 @manager.register("install")
 def install(package: str, local: bool = False):
@@ -38,7 +37,7 @@ def install(package: str, local: bool = False):
         pass
     
 
-@manager.register("debug", "logging")
+@deb.register("logging")
 def test_log():
     debug.info("This is an example of info text!")
     debug.warning("This is an example of warning text!")
@@ -51,6 +50,8 @@ def update(package: str, local: bool = False):
         result = Path(__file__).parent if local else site_packages
         con.update(status=f"Updating package {package}")
         try:
+            new_ver = version.PackageVersion.from_str(packages.search_package(package)["version"])
+            #current_ver = packages.search_package()
             packages.remove_package(package)
             packages.download_package(package, result=result)
         except Exception as e:

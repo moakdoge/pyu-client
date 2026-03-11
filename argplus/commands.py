@@ -1,7 +1,9 @@
+from dataclasses import dataclass
 import inspect, argparse
 from pathlib import Path
 import atexit
 import sys
+from typing import Any
 from . import ctx as ct
 import os
 
@@ -11,7 +13,14 @@ class CommandException(BaseException):
         self.code = status_code
         self.message = status_message
         super().__init__(f"Command raised exception (Status code {status_code}): {status_message}")
-        
+
+@dataclass
+class CommandGroup:
+    name: str
+    _cmd: Any
+    def register(self, sub_command: str, **kwargs):
+        return self._cmd(cmd=self.name, subcmd=sub_command, **kwargs)
+
 class CommandManager:
     def __init__(self, name: str | None = None, description: str = ""):
         os.environ["CommandManagerCreated"] = "1"
@@ -22,6 +31,10 @@ class CommandManager:
         self._groups = {}
         self._before = []
         self._after = []
+        
+    def group(self, group_name: str) -> CommandGroup:
+        new = CommandGroup(group_name, self.register)
+        return new
 
     
     
