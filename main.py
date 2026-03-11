@@ -7,7 +7,6 @@ from argplus import commands, ctx
 from loggingplus import *
 from packagemanager import packages, searcher, version
 from inputplus import inp
-import readline
 
 
 #handle arguments

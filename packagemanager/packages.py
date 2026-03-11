@@ -10,7 +10,7 @@ from rich.spinner import Spinner
 from rich.console import Console 
 from loggingplus import *
 import subprocess, sys
-URL = "http://moakdoge-laptop.local:5000"
+URL = "http://192.168.0.24:5000"
 def get_package(package: str, depends: bool = False) -> bytes:
     o=requests.get(f"{URL}/packages/{package}/download{"?depends=1" if depends else "?depends=0"}")
     o.raise_for_status()

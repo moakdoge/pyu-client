@@ -1,6 +1,7 @@
 {
  "name": "argplus",
- "version": "1.4.0",
+ "version": "1.4.3",
  "author": "moakdoge",
- "depends": {}
+ "depends": {},
+ "description": "A sample description file."
 }
