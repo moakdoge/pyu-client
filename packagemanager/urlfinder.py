@@ -1,6 +1,6 @@
-import sys
-
+import threading
 import requests
+
 __URLS = [
     "http://127.0.0.1:5000",
     "http://192.168.0.24:5000",
@@ -8,20 +8,42 @@ __URLS = [
 ]
 
 url = None
+_lock = threading.Lock()
+
+
+def _check(link):
+    global url
+
+    if url is not None:
+        return
+
+    try:
+        r = requests.get(link + "/package-list", timeout=0.5)
+        if r.ok:
+            with _lock:
+                if url is None:
+                    url = link
+    except Exception:
+        pass
+
+
 def get_url():
     global url
+
     if url is not None:
         return url
+
+    threads = []
+
     for link in __URLS:
-        try:
-            r = requests.get(link+"/package-list", timeout=0.05)
-            if r.status_code == 404 or r.ok:
-                url = link
-                break
-        except Exception as e:
-            #print(f"error on link {link}: {e}")
-            continue
+        t = threading.Thread(target=_check, args=(link,))
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
+
     if url is None:
-        raise FileNotFoundError(f"Failed to find valid url!")
+        raise FileNotFoundError("Failed to find valid url!")
 
     return url
