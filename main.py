@@ -49,20 +49,25 @@ def update(package: str, local: bool = False, pip: bool = False):
         result = Path(os.getcwd()) if local else site_packages
         con.update(status=f"Updating package {package}")
         p=packages.search_package(package)
+        current_ver = "NaN"
+        new_ver = "NaN"
         try:
             new_ver = version.PackageVersion.from_str(p["version"])
             r=searcher.search_package(package=package, path=result)
+            if r is None:
+                debug.error(f"Failed to find package {package}!")
+                return
             current_ver = version.PackageVersion.from_str(json.loads((r/"metadata.json").read_text())["version"])
             if current_ver >= new_ver:
                 debug.info(f"No updates detected.")
                 return
             packages.remove_package(package, p=result)
             packages.download_package(package, result=result, pip=pip)
+            debug.info(f"{package}: {current_ver} -> {new_ver}")
         except Exception as e:
             debug.error(f"{e}")
             return
 
-    debug.info(f"Updated {package} successfully!")
 
 
 @manager.register("info")
