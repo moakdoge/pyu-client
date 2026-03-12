@@ -15,7 +15,7 @@ manager = commands.CommandManager("pyu")
 p = Path(os.getcwd())
 #global shit
 
-deb = manager.group("package")
+package_command = manager.group("package")
 
 
 @manager.register("install")
@@ -37,13 +37,6 @@ def install(package: str, local: bool = False):
         debug.info(f"Downloaded {package} successfully!")
         pass
     
-
-@deb.register("logging")
-def test_log():
-    debug.info("This is an example of info text!")
-    debug.warning("This is an example of warning text!")
-    debug.error("This is an example of logging error!")
-
 @manager.register("update")
 def update(package: str, local: bool = False, pip: bool = False):
     global p
@@ -89,16 +82,16 @@ def list_packages():
     lines = [f"Total packages installed: {len(packs)}", "--------------------"]
     for package in packs:
         if isinstance(package, Package):
-            lines.append(f"{package} - @{package.author}")
+            lines.append(f"{package.name} - @{package.author}")
     debug.info("\n".join(lines))
 
-@manager.register("package", "bump")
+@package_command.register("bump")
 def package_bump():
     '''Ups the version of the current package up by one. For example, 1.2.3 -> 1.2.4'''
     
     pack = Package.from_folder(Path(os.getcwd()))
     if not pack:
-        debug.error(f"Please make sure this is a package before calling --update!")
+        debug.error(f"Please make sure this is a package!")
         return
     
     old = pack.version
@@ -109,7 +102,7 @@ def package_bump():
     pack.save()
     return
 
-@manager.register("package", "init")
+@package_command.register("init")
 def package_init():
     '''Creates a brand new package in the current directory.'''
     if not (p / "__init__.py").exists():
@@ -151,7 +144,7 @@ def package_init():
     
     debug.info("Successfully created metadata.json")
 
-@manager.register("package", "publish")
+@package_command.register("publish")
 def upload_package():
     '''Uploads a package over to the server.'''
     pack = Package.from_folder(Path(os.getcwd()))
@@ -168,7 +161,7 @@ def upload_package():
         else:
             debug.error(f"Failed to publish package! (Error {send.status_code}, '{send.json()["detail"]}')")
 
-@manager.register("package", "bp", aliases=["release", "bump-publish"])
+@package_command.register("bp", aliases=["release", "bump-publish"])
 def bp():
     '''Will automatically bump the package and publish it.'''
     manager.run("package", "bump")
@@ -199,8 +192,8 @@ def uninstall(package: str, local: bool = False,force: bool = False, keep_depend
     debug.info(f"Removed package {pack.name}")
 
     
-@manager.register("test", "command")
-def test_command(package: str):
+@manager.register("test", "command", private=True)
+def test_command(package: Annotated[str, "Package"]):
     inst=(Path(os.getcwd()) / "tmp")
     if inst.exists():
         shutil.rmtree(inst)

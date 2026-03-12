@@ -73,6 +73,8 @@ class CommandManager:
                         _real = other[0]
                     else:
                         _h = f"{other[0]} {_h}"
+                if private:
+                    _h = argparse.SUPPRESS
                 if anno is inspect._empty or anno is None:
                     anno = Any
                 if param.default is inspect._empty:

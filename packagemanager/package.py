@@ -17,6 +17,8 @@ class Package:
         if not root:
             root = site_packages
         raw = requests.get(urlfinder.get_url() + f"/packages/{package}")
+        if not raw.ok:
+            raw.raise_for_status()
         self._hash = raw.json()["hash"]
         if version is None:
             version = PackageVersion.from_str(raw.json()["version"])

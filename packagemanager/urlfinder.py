@@ -19,10 +19,9 @@ def _check(link):
 
     try:
         r = requests.get(link + "/package-list", timeout=0.5)
-        if r.ok:
-            with _lock:
-                if url is None:
-                    url = link
+        with _lock:
+            if url is None:
+                url = link
     except Exception:
         pass
 
