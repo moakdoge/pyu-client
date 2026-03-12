@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from .version import PackageVersion
 
 
@@ -8,5 +9,6 @@ class PackageMetadata:
     version: PackageVersion
     author: str
     description: str
-    depends: dict # type: ignore
+    depends: list # type: ignore
     versions: list[PackageVersion]
+    path: Path

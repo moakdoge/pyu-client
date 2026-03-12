@@ -237,5 +237,8 @@ def uninstall(package: str, local: bool = False,force: bool = False, keep_depend
 @manager.register("test", "command")
 def test_command(package: str):
     p=Package(package)
+    inst=(Path(os.getcwd()) / "tmp")
+    inst.mkdir(exist_ok=True)
+    p.install(inst)
 if __name__ == "__main__":
     manager.process_commands()
