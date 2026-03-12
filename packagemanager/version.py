@@ -40,5 +40,6 @@ class PackageVersion:
     @classmethod
     def from_str(cls, st: str):
         parts = st.split(".")
-        parts = [int(p) for p in parts]
+        
+        parts = [int(p.replace("=", "").replace(">", "")) for p in parts]
         return cls(*parts)

@@ -11,7 +11,7 @@ from . import urlfinder
 import requests, shutil
 
 class Package:
-    def __init__(self, package: str, version: PackageVersion | str | None = None) -> None:
+    def __init__(self, package: str, version: PackageVersion | str | None = None, root: Path = Path()) -> None:
         self._package = package
         raw = requests.get(urlfinder.get_url() + f"/packages/{package}")
         if version is None:
@@ -21,8 +21,8 @@ class Package:
             version = PackageVersion.from_str(version)
 
         n: list[Package] = []
-        for package, _version in raw.get("depends", {}).items():
-            n.append(Package(package=package, version=_version))
+        for _pk, _version in raw.get("depends", {}).items():
+            n.append(Package(package=_pk, version=_version, root=root))
 
         meta = PackageMetadata(
             name=package,
@@ -30,8 +30,8 @@ class Package:
             author=raw.get("author", "N/A"),
             description=raw.get("description", "N/A"),
             depends=n,
-            versions=[PackageVersion.from_str(v) for v in raw["versions"]],
-            path=Path()
+            versions=[PackageVersion.from_str(v) for v in raw.get("versions", [])],
+            path=(root / package)
         )
         self._metadata = meta
 
@@ -39,36 +39,32 @@ class Package:
     
     def download(self) -> bytes:
         '''Downloads a package and returns the bytes of the content downloaded.'''
-        x=requests.get(f"{self.url}/download")
+        x=requests.get(f"{self.url}/download?depends=0")
         if x.ok:
             return x.content
         else:
             raise NotImplementedError("idk..")
     
-    def install(self, install_folder: Path | str) -> Path:
-        if isinstance(install_folder, str):
-            install_folder = Path(install_folder)
+    def _install_dependencies(self):
+        for depend in self._metadata.depends:
+            if isinstance(depend, Package):
+                print(depend.url, depend.path, self.path)
+                depend.install(False)
 
+    def install(self, dependencies:bool=True) -> Path:
         by = self.download()
-        self._metadata.path = install_folder / self.name
         b  = io.BytesIO(by)
-
+        if dependencies:
+            self._install_dependencies()
         with tempfile.TemporaryDirectory() as z:
             with zipfile.ZipFile(b, "r") as zip:
-                zip.extractall(z)
-            zipped=Path(z) / (str(self.version) + ".zip")
-            output = Path(z) / self.name
-            with zipfile.ZipFile(zipped, "r") as f:
-                f.extractall(output)
-            shutil.move(output, install_folder)
+                zip.extractall(Path(z) / self._package)
+            shutil.move(Path(z) / self._package, self.path)
         return self.path
-    
-    def update(self):
-        new = self.newest
-        if new > self.version:
-            self.__init__(self._package, new)
-            self.install(self.path)
-        
+
+    def remove(self):
+        if self.path.exists():
+            shutil.rmtree(self.path)
 
     @property
     def url(self):
