@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import sys
 
+
 site_packages = Path(next(x for x in sys.path if "packages" in x))
 
 def folder_is_package(folder: Path):

@@ -8,6 +8,7 @@ from typing import Annotated
 from loggingplus import *
 from packagemanager import packages, searcher, version
 from inputplus import inp
+from packagemanager.package import Package
 
 
 #handle arguments
@@ -234,9 +235,7 @@ def uninstall(package: str, local: bool = False,force: bool = False, keep_depend
                 debug.info(f"Removed dependency of {fold}")
 
 @manager.register("test", "command")
-def test_command(arg1: bool = False):
-    if arg1:
-        raise commands.CommandException(status_code=1, status_message="bruh")
-    pass
+def test_command(package: str):
+    p=Package(package)
 if __name__ == "__main__":
     manager.process_commands()
