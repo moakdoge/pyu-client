@@ -238,7 +238,11 @@ def uninstall(package: str, local: bool = False,force: bool = False, keep_depend
 def test_command(package: str):
     p=Package(package)
     inst=(Path(os.getcwd()) / "tmp")
+    if inst.exists():
+        shutil.rmtree(inst)
     inst.mkdir(exist_ok=True)
     p.install(inst)
+    p.update()
+
 if __name__ == "__main__":
     manager.process_commands()

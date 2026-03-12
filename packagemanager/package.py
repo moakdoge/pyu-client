@@ -62,6 +62,13 @@ class Package:
                 f.extractall(output)
             shutil.move(output, install_folder)
         return self.path
+    
+    def update(self):
+        new = self.newest
+        if new > self.version:
+            self.__init__(self._package, new)
+            self.install(self.path)
+        
 
     @property
     def url(self):
@@ -94,3 +101,9 @@ class Package:
     @property
     def path(self):
         return self._metadata.path
+    
+    @property
+    def newest(self) -> PackageVersion:
+       x=requests.get(f"{urlfinder.get_url()}/packages/{self._package}")
+       x.raise_for_status()
+       return PackageVersion.from_str(x.json()["version"])
