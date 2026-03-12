@@ -3,8 +3,9 @@ import inspect, argparse
 from pathlib import Path
 import atexit
 import sys
-from typing import Any
+from typing import Annotated, Any, get_args, get_origin, get_type_hints
 from . import ctx as ct
+from . import custom
 import os
 
 
@@ -62,18 +63,28 @@ class CommandManager:
 
             for name, param in inspect.signature(fn).parameters.items():
                 anno = param.annotation 
+                _h=f"(default: {str(param.default) if param.default is not inspect._empty else None})"if not private else argparse.SUPPRESS
+                _real = anno
+                if get_origin(anno) is Annotated:
+                    base_type, *other = get_args(anno)
+                    anno = base_type
+                    if isinstance(other[0], custom.BaseAnnotation):
+                        _h = f"{other[0].description} [{anno}] {_h}"
+                        _real = other[0]
+                    else:
+                        _h = f"{other[0]} {_h}"
                 if anno is inspect._empty or anno is None:
-                    anno = str
+                    anno = Any
                 if param.default is inspect._empty:
-                    p.add_argument(name, type=anno)
+                    p.add_argument(name, type=_real if _real is not Any else str, help=_h) # type: ignore
                 else:
                     if param.annotation is bool:
                         if param.default:
-                            p.add_argument("--no-"+name, action="store_false", dest=name, default=param.default, help=f"(default: {str(param.default)})"if not private else argparse.SUPPRESS)
+                            p.add_argument("--no-"+name, action="store_false", dest=name, default=param.default, help=_h)
                         else:
-                            p.add_argument("--"+name, action="store_true", default=param.default, help=f"(default: {str(param.default)})" if not private else argparse.SUPPRESS)
+                            p.add_argument("--"+name, action="store_true", default=param.default, help=_h)
                     else:
-                        p.add_argument("--"+name, default=param.default, type=anno, help=f"(default: {str(param.default)})"if not private else argparse.SUPPRESS)
+                        p.add_argument("--"+name, default=param.default, type=_real, help=_h, metavar=getattr(anno, "__name__", None) or (anno.__qualname__))
 
             return fn
         return decorator

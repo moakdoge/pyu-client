@@ -43,20 +43,21 @@ def test_log():
     debug.error("This is an example of logging error!")
 
 @manager.register("update")
-def update(package: str, local: bool = False):
+def update(package: str, local: bool = False, pip: bool = False):
     '''Updates a specific package.'''
     with console.status(status=f"Updating package {package}..", spinner="dots") as con:
-        result = Path(__file__).parent if local else site_packages
+        result = Path(os.getcwd()) if local else site_packages
         con.update(status=f"Updating package {package}")
         p=packages.search_package(package)
         try:
             new_ver = version.PackageVersion.from_str(p["version"])
-            current_ver = version.PackageVersion.from_str(packages.search_package(package)["version"])
+            r=searcher.search_package(package=package, path=result)
+            current_ver = version.PackageVersion.from_str(json.loads((r/"metadata.json").read_text())["version"])
             if current_ver >= new_ver:
                 debug.info(f"No updates detected.")
                 return
-            packages.remove_package(package)
-            packages.download_package(package, result=result)
+            packages.remove_package(package, p=result)
+            packages.download_package(package, result=result, pip=pip)
         except Exception as e:
             debug.error(f"{e}")
             return

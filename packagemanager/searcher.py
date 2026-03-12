@@ -9,7 +9,7 @@ def folder_is_package(folder: Path):
         return False
     if not folder.exists():
         return False
-    return (folder / "WATERMARK").exists()
+    return (folder / "metadata.json").exists()
     
 
 def search_package(package: str, path: Path | None = None) -> Path | None:

@@ -10,7 +10,7 @@ from rich.spinner import Spinner
 from rich.console import Console 
 from loggingplus import *
 import subprocess, sys
-URL = "http://192.168.0.24:5000"
+URL = "http://moakdoge-laptop.local:5000"
 def get_package(package: str, depends: bool = False) -> bytes:
     o=requests.get(f"{URL}/packages/{package}/download{"?depends=1" if depends else "?depends=0"}")
     o.raise_for_status()
@@ -59,7 +59,7 @@ def install_pip_package(req: Path, local: Path | None = None) -> list[subprocess
     return procs
 
 site_packages = Path(next(x for x in sys.path if "packages" in x))
-def download_package(package: str, result: Path, version: str = ""):
+def download_package(package: str, result: Path, version: str = "", pip: bool = True):
     with tempfile.TemporaryDirectory() as z:
         tmp = Path(z)
         with open(tmp / "output.zip", "wb") as f:
@@ -80,29 +80,29 @@ def download_package(package: str, result: Path, version: str = ""):
             with zipfile.ZipFile(zipf, "r") as _tmp:
                 _tmp.extractall(d)
 
-            r=(d / "requirements.txt")
-            if r.exists():
-                _=result
-                if result == site_packages:
-                    _ = None
-                k=install_pip_package(r, local=_)
-                for proc in k:
-                    proc.wait()
+            if pip:
+                r=(d / "requirements.txt")
+                if r.exists():
+                    _=result
+                    if result == site_packages:
+                        _ = None
+                    k=install_pip_package(r, local=_)
+                    for proc in k:
+                        proc.wait()
 
             os.remove(zipf)
             folders.append(d)
         for folder in folders:
             result_path = (result.absolute() / folder.name)
             if not result_path.exists():
-                shutil.copytree(folder.absolute(), result.absolute() / folder.name)
-                continue
+                shutil.copytree(folder.absolute(), result.absolute() / package)
             else:
                 pass
                 # print(f"Skipped {folder.name} - Not valid (file exists)")
 
         
-def remove_package(package: str):
-    pck = searcher.search_package(package)
+def remove_package(package: str, p: Path | None):
+    pck = searcher.search_package(package, path=p)
     if not pck:
         raise FileNotFoundError(f"Package {package} not found!")
     shutil.rmtree(pck)
