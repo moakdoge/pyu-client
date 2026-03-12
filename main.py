@@ -191,10 +191,11 @@ def clean(confirm: bool = False):
     if not confirm:
         debug.warning("clean will wipe every single package installed. If this is what you want, rerun this command passing --confirm")
         return
-    pack = searcher.get_installed()
-    for package, data in pack.items():
-        packages.remove_package(package)
-        debug.info(f"Removed package {package}")
+    packs = Package.find_all()
+    for package in packs:
+        if isinstance(package, Package):
+            package.remove()
+            debug.info(f"Removed package {package.name}")
 
 @manager.register("uninstall")
 def uninstall(package: str, local: bool = False,force: bool = False, keep_depends: bool = False):
