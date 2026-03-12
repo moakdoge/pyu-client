@@ -130,3 +130,16 @@ class Package:
         with open(self.path / "metadata.json", "w") as f:
             data = self._metadata.dump()
             f.write(json.dumps(data, indent=2))
+    
+    def upload(self):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as z:
+            for file in Path(self.path).rglob("*"):
+                if file.is_file():
+                    z.write(file, file.relative_to(self.path))
+        buffer.seek(0)
+        send = requests.post(
+            url=urlfinder.get_url() + "/upload",
+            files={"file": ("package.zip", buffer)}
+        )
+        return send

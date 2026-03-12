@@ -165,21 +165,13 @@ def package_init():
 @manager.register("package", "publish")
 def upload_package():
     '''Uploads a package over to the server.'''
-    if not (p / "metadata.json").exists():
-        debug.error("This directory is not a valid package! Run pyu init to make it one.")
-    
-    name = json.loads((p / "metadata.json").read_text()).get("name")
+    pack = Package.from_folder(Path(os.getcwd()))
+    if pack is None:
+        debug.error("Not a valid package! run `pyu init` to make it one.")
+        return
+    name = pack.name
     with console.status(status=f"Publishing {name}..."):
-        buffer = io.BytesIO()
-        with zipfile.ZipFile(buffer, "w") as z:
-            for file in Path(p).rglob("*"):
-                if file.is_file():
-                    z.write(file, file.relative_to(p))
-        buffer.seek(0)
-        send = requests.post(
-            url=packages.URL + "/upload",
-            files={"file": ("package.zip", buffer)}
-        )
+        send = pack.upload()
         if send.ok:
             debug.info("Successfully published package!")
         elif send.status_code == 409:
