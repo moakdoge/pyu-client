@@ -1,8 +1,9 @@
 {
- "name": "argplus",
- "version": "1.4.6",
- "author": "moakdoge",
- "depends": {
-  "lob": ">=1.0.1"
- }
+  "name": "argplus",
+  "version": "1.4.7",
+  "author": "moakdoge",
+  "description": "",
+  "depends": {
+    "libmk": "1.0.0"
+  }
 }

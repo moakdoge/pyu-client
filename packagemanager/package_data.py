@@ -12,3 +12,14 @@ class PackageMetadata:
     depends: list # type: ignore
     versions: list[PackageVersion]
     path: Path
+    def dump(self) -> dict:
+        n = {}
+        for d in self.depends:
+            n[d.name] = str(d.version)
+        return {
+            "name": self.name,
+            "version": str(self.version),
+            "author": str(self.author),
+            "description": "",
+            "depends": n,
+        }

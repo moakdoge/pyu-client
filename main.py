@@ -72,36 +72,37 @@ def update(package: str, local: bool = False, pip: bool = False):
 
 
 @manager.register("info")
-def info(package: str):
+def info(package: str, local: bool = False):
     #attempt to find package
-    p=packages.search_package(package)
-    if p is None:
+    result = p if local else None
+    pack=Package(package, root=result)
+    if not pack.exists:
         debug.error("Package not found!")
         return
-    versions=[version.PackageVersion.from_str(v) for v in p["versions"]]
-    versions.sort(reverse=True)
-    versions = [str(v) for v in versions]
+    versions = [str(v) for v in pack.versions]
     versions[0] += " (latest)"
-    debug.info(f'''Info about {p["name"]} (@{p["author"]}):\n------------------------------------------\n"{p["description"]}"\n\nVersions\n{"\n".join(["\t- "+_ for _ in versions])}
-    \nMD5 hash: {p["hash"]}''')
+    debug.info(f'''Info about {pack.name} (@{pack.author}):\n------------------------------------------\n"{pack.description}"\n\nVersions\n{"\n".join(["\t- "+str(_) for _ in pack.versions])}
+    \nMD5 hash: {pack.hash}''')
+
 @manager.register("list")
 def list_packages():
     packs = searcher.get_installed()
     lines = [f"Total packages installed: {len(packs)}", "--------------------"]
     for package, data in packs.items():
-        lines.append(f"{package} - {data["author"]}")
+        lines.append(f"{package} - @{data["author"]}")
     debug.info("\n".join(lines))
 
 @manager.register("package", "bump")
 def package_bump():
     '''Ups the version of the current package up by one. For example, 1.2.3 -> 1.2.4'''
     
-    if not (p / "metadata.json").exists():
+    pack = Package.from_folder(Path(os.getcwd()))
+    if not pack:
         debug.error(f"Please make sure this is a package before calling --update!")
         return
-    j = json.loads((p / "metadata.json").read_text())
-    part1, part2, part3 = j["version"].split(".")
-    old = j["version"]
+    
+    part1, part2, part3 = (pack.version.major, pack.version.minor, pack.version.patch)
+    old = pack.version
     part1 = int(part1)
     part2 = int(part2)
     part3 = int(part3)
@@ -115,9 +116,8 @@ def package_bump():
             part1 += 1
         
     debug.info(f"Version: {old} -> {part1}.{part2}.{part3}")
-    j["version"] = f"{part1}.{part2}.{part3}"
-    with open((p / "metadata.json"), "w") as f:
-        f.write(json.dumps(j, indent=1))
+    pack._metadata.version = version.PackageVersion(part1, part2, part3)
+    pack.save()
     return
 
 @manager.register("package", "init")

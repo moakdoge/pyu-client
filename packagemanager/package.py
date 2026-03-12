@@ -1,8 +1,9 @@
 import io
+import json
 from pathlib import Path
 import tempfile
 import time
-import zipfile
+import zipfile, hashlib
 
 from .version import PackageVersion
 from . import package_data
@@ -16,6 +17,7 @@ class Package:
         if not root:
             root = site_packages
         raw = requests.get(urlfinder.get_url() + f"/packages/{package}")
+        self._hash = raw.json()["hash"]
         if version is None:
             version = PackageVersion.from_str(raw.json()["version"])
         raw = requests.get(urlfinder.get_url() + f"/packages/{package}/{version}").json()
@@ -25,19 +27,26 @@ class Package:
         n: list[Package] = []
         for _pk, _version in raw.get("depends", {}).items():
             n.append(Package(package=_pk, version=_version, root=root))
-
+        _versions=[PackageVersion.from_str(v) for v in raw.get("versions", [])]
+        _versions.sort(reverse=True)
         meta = PackageMetadata(
             name=package,
             version=version,
             author=raw.get("author", "N/A"),
             description=raw.get("description", "N/A"),
             depends=n,
-            versions=[PackageVersion.from_str(v) for v in raw.get("versions", [])],
+            versions=_versions,
             path=(root / package)
         )
         self._metadata = meta
 
-
+    @classmethod
+    def from_folder(cls, folder: Path):
+        if not folder.exists():
+            raise FileNotFoundError
+        if (folder / "metadata.json").exists():
+            loaded = json.loads((folder / "metadata.json").read_text())
+            return cls(loaded["name"], root=folder.parent)
         #self._version = version if not isinstance(version, PackageVersion) else PackageVersion.from_str(version)
     
     def download(self) -> bytes:
@@ -51,15 +60,17 @@ class Package:
     def _install_dependencies(self):
         for depend in self._metadata.depends:
             if isinstance(depend, Package):
-                print(depend.url, depend.path, self.path)
                 depend.install(False)
 
     def install(self, dependencies:bool=True) -> Path:
         by = self.download()
+#        if hashlib.md5(by).hexdigest() != self.hash:
+#            raise Exception(f"File failed checksum check!")
         b  = io.BytesIO(by)
         if dependencies:
             self._install_dependencies()
         with tempfile.TemporaryDirectory() as z:
+            
             with zipfile.ZipFile(b, "r") as zip:
                 zip.extractall(Path(z) / self._package)
             shutil.move(Path(z) / self._package, self.path)
@@ -110,3 +121,12 @@ class Package:
     @property
     def exists(self):
         return self.path.exists()
+    
+    @property
+    def hash(self):
+        return self._hash
+    
+    def save(self):
+        with open(self.path / "metadata.json", "w") as f:
+            data = self._metadata.dump()
+            f.write(json.dumps(data, indent=2))
