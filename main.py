@@ -48,9 +48,13 @@ def update(package: str, local: bool = False):
     with console.status(status=f"Updating package {package}..", spinner="dots") as con:
         result = Path(__file__).parent if local else site_packages
         con.update(status=f"Updating package {package}")
+        p=packages.search_package(package)
         try:
-            new_ver = version.PackageVersion.from_str(packages.search_package(package)["version"])
-            #current_ver = packages.search_package()
+            new_ver = version.PackageVersion.from_str(p["version"])
+            current_ver = version.PackageVersion.from_str(packages.search_package(package)["version"])
+            if current_ver >= new_ver:
+                debug.info(f"No updates detected.")
+                return
             packages.remove_package(package)
             packages.download_package(package, result=result)
         except Exception as e:
@@ -60,6 +64,19 @@ def update(package: str, local: bool = False):
     debug.info(f"Updated {package} successfully!")
 
 
+@manager.register("info")
+def info(package: str):
+    #attempt to find package
+    p=packages.search_package(package)
+    if p is None:
+        debug.error("Package not found!")
+        return
+    versions=[version.PackageVersion.from_str(v) for v in p["versions"]]
+    versions.sort(reverse=True)
+    versions = [str(v) for v in versions]
+    versions[0] += " (latest)"
+    debug.info(f'''Info about {p["name"]} (@{p["author"]}):\n------------------------------------------\n"{p["description"]}"\n\nVersions\n{"\n".join(["\t- "+_ for _ in versions])}
+    \nMD5 hash: {p["hash"]}''')
 @manager.register("list")
 def list_packages():
     packs = searcher.get_installed()
@@ -83,10 +100,11 @@ def package_bump():
     part3 = int(part3)
     
     part3 += 1
-    if part3 >= 10:
+    if part3 >= 100:
         part3 = 0
         part2 += 1
-        if part2 >= 10:
+        if part2 >= 100:
+            part2 = 0
             part1 += 1
         
     debug.info(f"Version: {old} -> {part1}.{part2}.{part3}")

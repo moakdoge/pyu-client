@@ -2,6 +2,8 @@
  "name": "argplus",
  "version": "1.4.3",
  "author": "moakdoge",
- "depends": {},
+ "depends": {
+    "libmk": ">=1.0.0"
+ },
  "description": "A sample description file."
 }

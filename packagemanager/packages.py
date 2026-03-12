@@ -17,7 +17,7 @@ def get_package(package: str, depends: bool = False) -> bytes:
     return o.content
 
 def search_package(package: str):
-    o = requests.get(f"{URL}/packages/{package}/cache")
+    o = requests.get(f"{URL}/packages/{package}")
     o.raise_for_status
     return o.json()
 
