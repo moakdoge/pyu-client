@@ -4,6 +4,7 @@ import io
 import json
 from pathlib import Path
 from argplus import commands, ctx
+from typing import Annotated
 from loggingplus import *
 from packagemanager import packages, searcher, version
 from inputplus import inp
