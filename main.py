@@ -15,21 +15,22 @@ from packagemanager.package import Package
 manager = commands.CommandManager("pyu")
 p = Path(os.getcwd())
 #global shit
-site_packages = Path(next(x for x in sys.path if "packages" in x))
+
 deb = manager.group("package")
+
 
 @manager.register("install")
 def install(package: str, local: bool = False):
     '''Installs a package.'''
     
     with console.status(status=f"Installing {package}...", spinner="dots"):
-        result = p if local else site_packages
-        located = searcher.search_package(package, result)
-        if located:
+        result = p if local else None
+        pack = Package(package=package, root=result)
+        if pack.exists:
             debug.error(f"Package {package} is already installed!")
             return
         try:
-            packages.download_package(package, result=result)
+            pack.install(True)
         except Exception as e:
             debug.error(f"{e}")
             return
@@ -46,30 +47,28 @@ def test_log():
 
 @manager.register("update")
 def update(package: str, local: bool = False, pip: bool = False):
+    global p
     '''Updates a specific package.'''
     with console.status(status=f"Updating package {package}..", spinner="dots") as con:
-        result = Path(os.getcwd()) if local else site_packages
+        result = p if local else None
         con.update(status=f"Updating package {package}")
-        p=packages.search_package(package)
-        current_ver = "NaN"
-        new_ver = "NaN"
+        pack = Package(package=package, root=result)
+        if not pack.exists:
+            debug.error(f"Package {package} is not installed!")
+            return
+        
+        current_ver = pack.version
+        new_ver = pack.newest
         try:
-            new_ver = version.PackageVersion.from_str(p["version"])
-            r=searcher.search_package(package=package, path=result)
-            if r is None:
-                debug.error(f"Failed to find package {package}!")
-                return
-            current_ver = version.PackageVersion.from_str(json.loads((r/"metadata.json").read_text())["version"])
             if current_ver >= new_ver:
                 debug.info(f"No updates detected.")
                 return
-            packages.remove_package(package, p=result)
-            packages.download_package(package, result=result, pip=pip)
+            pack.remove()
+            pack.install(False)
             debug.info(f"{package}: {current_ver} -> {new_ver}")
         except Exception as e:
             debug.error(f"{e}")
             return
-
 
 
 @manager.register("info")

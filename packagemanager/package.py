@@ -8,11 +8,13 @@ from .version import PackageVersion
 from . import package_data
 from .package_data import PackageMetadata
 from . import urlfinder
-import requests, shutil
-
+import requests, shutil, sys
+site_packages = Path(next(x for x in sys.path if "packages" in x))
 class Package:
-    def __init__(self, package: str, version: PackageVersion | str | None = None, root: Path = Path()) -> None:
+    def __init__(self, package: str, version: PackageVersion | str | None = None, root: Path | None = site_packages) -> None:
         self._package = package
+        if not root:
+            root = site_packages
         raw = requests.get(urlfinder.get_url() + f"/packages/{package}")
         if version is None:
             version = PackageVersion.from_str(raw.json()["version"])
@@ -34,6 +36,7 @@ class Package:
             path=(root / package)
         )
         self._metadata = meta
+
 
         #self._version = version if not isinstance(version, PackageVersion) else PackageVersion.from_str(version)
     
@@ -103,3 +106,7 @@ class Package:
        x=requests.get(f"{urlfinder.get_url()}/packages/{self._package}")
        x.raise_for_status()
        return PackageVersion.from_str(x.json()["version"])
+    
+    @property
+    def exists(self):
+        return self.path.exists()
