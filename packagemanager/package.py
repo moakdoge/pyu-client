@@ -50,7 +50,9 @@ class Package:
         #self._version = version if not isinstance(version, PackageVersion) else PackageVersion.from_str(version)
     
     @staticmethod
-    def find_all(folder: Path = site_packages) -> list:
+    def find_all(folder: Path | None = site_packages) -> list:
+        if folder is None:
+            folder = site_packages
         _: list[Package] = []
         for f in folder.glob("*"):
             if f.is_file():
@@ -62,6 +64,12 @@ class Package:
             except Exception:
                 continue
         return _
+    
+    @classmethod
+    def find(cls, package: str, folder: Path | None = None):
+        if folder is None:
+            folder = site_packages
+        return cls.from_folder(folder / package)
     def download(self) -> bytes:
         '''Downloads a package and returns the bytes of the content downloaded.'''
         x=requests.get(f"{self.url}/download?depends=0")

@@ -202,30 +202,14 @@ def uninstall(package: str, local: bool = False,force: bool = False, keep_depend
     '''Uninstalls a package'''
     debug.info('Searching for package...')
     O = (p if local else None)
-    folder = searcher.search_package(package, O)
-    if not folder:
+    pack = Package.find(package, O)
+    if not pack:
         debug.error(f"Could not find package {package}!")
         return
-    metadata = (folder / "metadata.json").read_text()
-    dicted = json.loads(metadata)
-    _depends = dicted.get("depends", {})
-    packs = searcher.get_installed()
-    for _package, data in packs.items():
-        for __package, _version in data.get("depends", {}).items():
-            if __package == package and not force:
-                debug.error(f"Package {_package} relies on package {package}. Pass --force to force removal despite this.")
-                return
+    pack.remove()
+    debug.info(f"Removed package {pack.name}")
 
-    debug.info(f"Removed package {folder.name}")
-    shutil.rmtree(folder)
     
-    if not keep_depends:
-        for lib, version in _depends.items():
-            fold = searcher.search_package(lib, O)
-            if fold:
-                shutil.rmtree(fold)
-                debug.info(f"Removed dependency of {fold}")
-
 @manager.register("test", "command")
 def test_command(package: str):
     inst=(Path(os.getcwd()) / "tmp")
