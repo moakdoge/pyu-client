@@ -6,7 +6,6 @@ from pathlib import Path
 from argplus import commands, ctx
 from typing import Annotated
 from loggingplus import *
-from packagemanager import packages, searcher, version
 from inputplus import inp
 from packagemanager.package import Package
 
@@ -86,10 +85,11 @@ def info(package: str, local: bool = False):
 
 @manager.register("list")
 def list_packages():
-    packs = searcher.get_installed()
+    packs = Package.find_all()
     lines = [f"Total packages installed: {len(packs)}", "--------------------"]
-    for package, data in packs.items():
-        lines.append(f"{package} - @{data["author"]}")
+    for package in packs:
+        if isinstance(package, Package):
+            lines.append(f"{package} - @{package.author}")
     debug.info("\n".join(lines))
 
 @manager.register("package", "bump")
@@ -101,22 +101,11 @@ def package_bump():
         debug.error(f"Please make sure this is a package before calling --update!")
         return
     
-    part1, part2, part3 = (pack.version.major, pack.version.minor, pack.version.patch)
     old = pack.version
-    part1 = int(part1)
-    part2 = int(part2)
-    part3 = int(part3)
-    
-    part3 += 1
-    if part3 >= 100:
-        part3 = 0
-        part2 += 1
-        if part2 >= 100:
-            part2 = 0
-            part1 += 1
+    new = pack.version.bump()
         
-    debug.info(f"Version: {old} -> {part1}.{part2}.{part3}")
-    pack._metadata.version = version.PackageVersion(part1, part2, part3)
+    debug.info(f"Version: {old} -> {new}")
+    pack._metadata.version = new
     pack.save()
     return
 

@@ -43,3 +43,17 @@ class PackageVersion:
         
         parts = [int(p.replace("=", "").replace(">", "")) for p in parts]
         return cls(*parts)
+    
+    def bump(self):
+        part1 = int(self.major)
+        part2 = int(self.minor)
+        part3 = int(self.patch)
+        
+        part3 += 1
+        if part3 >= 100:
+            part3 = 0
+            part2 += 1
+            if part2 >= 100:
+                part2 = 0
+                part1 += 1
+        return PackageVersion(major=part1, minor=part2, patch=part3)
