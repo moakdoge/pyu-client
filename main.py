@@ -119,7 +119,7 @@ def package_init():
             return
     
     
-    auto_name = p.name.lower().replace(" ", "")
+    auto_name = manager.cwd.name.lower().replace(" ", "")
     real_name = input(f"[{auto_name}] Choose a name: ")
     if real_name.strip(" ").strip("\t").strip("\n") == "":
         real_name = auto_name
@@ -208,6 +208,26 @@ def test_command(package: Annotated[str, "Package"]):
     p.install(False)
     time.sleep(5)
     p.remove()
+
+@manager.register("test", "version")
+def test_version(version: str, operator: str, version2: str):
+    from version import PackageVersion
+    v = PackageVersion.from_str(version)
+    v2 = PackageVersion.from_str(version2)
+    match operator:
+        case ">":
+            debug.info(v>v2)
+        case "<":
+            debug.info(v<v2)
+        case ">=":
+            debug.info(v>=v2)
+        case "<=":
+            debug.info(v<=v2)
+        case "==":
+            debug.info(v==v2)
+        case _:
+            debug.error("Invalid operator!")
+
 
 @manager.register("test", "exception")
 def test_exception():

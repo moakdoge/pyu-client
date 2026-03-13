@@ -5,7 +5,7 @@ import tempfile
 import time
 import zipfile, hashlib
 
-from .version import PackageVersion
+from version import PackageVersion
 from . import package_data
 from .package_data import PackageMetadata
 from . import urlfinder

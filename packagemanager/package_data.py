@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from .version import PackageVersion
+from version import PackageVersion
 
 
 @dataclass
