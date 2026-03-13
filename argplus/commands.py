@@ -35,7 +35,7 @@ class CommandManager:
         self.globals = SimpleNamespace()
         self._global_parser =  argparse.ArgumentParser(add_help=False)
         self._global_names = set()
-        self._exception_handlers: dict[Exception, function] = {}
+        self._exception_handlers: dict[type[Exception], function] = {}
         
         #manually adding the ability to add --path
         self._global_parser.add_argument(f"--path", type=Path)
@@ -49,7 +49,7 @@ class CommandManager:
         self._global_parser.add_argument(f"--{argument_name}", default=default, *args, **kwargs)
         self._global_names.add(argument_name)
 
-    def exception(self, *exceptions: Exception):
+    def exception(self, *exceptions: type[Exception]):
         '''NOTE: return True to mask the exception, return FALSE to let it raise.'''
         def decorator(fn):
             for exp in exceptions:
@@ -157,8 +157,8 @@ class CommandManager:
                     best_depth = -1
 
                     for exp, fn in self._exception_handlers.items():
-                        if isinstance(e, exp):
-                            depth = len(exp.mro())
+                        if isinstance(e, exp): # type: ignore
+                            depth = len(exp.mro()) # type: ignore
                             if depth > best_depth:
                                 best_depth = depth
                                 handler = fn

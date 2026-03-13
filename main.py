@@ -25,7 +25,7 @@ def before(ctx: ctx.CommandContext):
 def on(ctx: ctx.CommandContext, exp: Exception):
     debug.error(f"{type(exp).__name__}: {exp}")
     return False
-exp.__name__
+
 @manager.register("install")
 def install(package: str):
     '''Installs a package.'''
