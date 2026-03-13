@@ -21,7 +21,7 @@ class CommandGroup:
     _cmd: Any
     def register(self, sub_command: str, **kwargs):
         return self._cmd(cmd=self.name, subcmd=sub_command, **kwargs)
-
+from types import SimpleNamespace
 class CommandManager:
     def __init__(self, name: str | None = None, description: str = ""):
         os.environ["CommandManagerCreated"] = "1"
@@ -32,29 +32,44 @@ class CommandManager:
         self._groups = {}
         self._before = []
         self._after = []
+        self.globals = SimpleNamespace()
+        self._global_parser =  argparse.ArgumentParser(add_help=False)
+        self._global_names = set()
+        
+        #manually adding the ability to add --path
+        self._global_parser.add_argument(f"--path", type=Path)
+        self.cwd: Path
         
     def group(self, group_name: str) -> CommandGroup:
         new = CommandGroup(group_name, self.register)
         return new
 
-    
-    
+    def add_global(self, argument_name: str, default:Any= None, *args, **kwargs):
+        self._global_parser.add_argument(f"--{argument_name}", default=default, *args, **kwargs)
+        self._global_names.add(argument_name)
+
     def register(self, cmd: str, subcmd: str | None = None, aliases: list[str] | None = None, private: bool = False):
         def decorator(fn):
-
+            
             if subcmd is None:
                 # top level command
-                p = self._sub.add_parser(cmd, help=fn.__doc__)
+                p = self._sub.add_parser(cmd, help=fn.__doc__, parents=[self._global_parser])
                 self._cmds[cmd] = fn
 
             else:
                 # grouped command
                 if cmd not in self._groups:
                     gp = self._sub.add_parser(cmd)
-                    gp._sub = gp.add_subparsers(dest="subcommand")
+                    gp._sub = gp.add_subparsers(dest="subcommand") # type: ignore
                     self._groups[cmd] = gp
 
-                p = self._groups[cmd]._sub.add_parser(subcmd, help=fn.__doc__, aliases=aliases or [])
+                
+                p = self._groups[cmd]._sub.add_parser(
+                    subcmd,
+                    help=fn.__doc__,
+                    aliases=aliases or [],
+                    parents=[self._global_parser]
+                )
                 self._cmds[(cmd, subcmd)] = fn
                 if aliases:
                     for arg in aliases:
@@ -78,8 +93,10 @@ class CommandManager:
                 if anno is inspect._empty or anno is None:
                     anno = Any
                 if param.default is inspect._empty:
-                    p.add_argument(name, type=_real if _real is not Any else str, help=_h) # type: ignore
+                    p.add_argument(name, type=_real if _real is not Any else str, help=_h)
                 else:
+                    if name in self._global_names:
+                        continue
                     if param.annotation is bool:
                         if param.default:
                             p.add_argument("--no-"+name, action="store_false", dest=name, default=param.default, help=_h)
@@ -92,7 +109,12 @@ class CommandManager:
         return decorator
     def process_commands(self, argv: list | None = None) -> int:
         args = self._parser.parse_args(argv or sys.argv[1:])
+        self.cwd = args.path or Path(os.getcwd()).resolve()
         os.environ["CommandManagerCalled"] = "1"
+        for name in self._global_names:
+            setattr(self.globals, name, getattr(args, name))
+            delattr(args, name)
+
         if hasattr(args, "subcommand") and args.subcommand:
             fn = self._cmds.get((args.command, args.subcommand))
         else:

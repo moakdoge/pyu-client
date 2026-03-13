@@ -12,18 +12,19 @@ from packagemanager.package import Package
 
 #handle arguments
 manager = commands.CommandManager("pyu")
-p = Path(os.getcwd())
+manager.add_global("local", default=False, action="store_true")
+
 #global shit
 
 package_command = manager.group("package")
 
 
 @manager.register("install")
-def install(package: str, local: bool = False):
+def install(package: str):
     '''Installs a package.'''
     
     with console.status(status=f"Installing {package}...", spinner="dots"):
-        result = p if local else None
+        result = p if manager.globals.local else None
         pack = Package(package=package, root=result)
         if pack.exists:
             debug.error(f"Package {package} is already installed!")
@@ -38,11 +39,11 @@ def install(package: str, local: bool = False):
         pass
     
 @manager.register("update")
-def update(package: str, local: bool = False, pip: bool = False):
+def update(package: str, pip: bool = False):
     global p
     '''Updates a specific package.'''
     with console.status(status=f"Updating package {package}..", spinner="dots") as con:
-        result = p if local else None
+        result = p if manager.globals.local else None
         con.update(status=f"Updating package {package}")
         pack = Package(package=package, root=result)
         if not pack.exists:
@@ -64,9 +65,9 @@ def update(package: str, local: bool = False, pip: bool = False):
 
 
 @manager.register("info")
-def info(package: str, local: bool = False):
+def info(package: str):
     #attempt to find package
-    result = p if local else None
+    result = p if manager.globals.local else None
     pack=Package(package, root=result)
     if not pack.exists:
         debug.error("Package not found!")
@@ -89,7 +90,7 @@ def list_packages():
 def package_bump():
     '''Ups the version of the current package up by one. For example, 1.2.3 -> 1.2.4'''
     
-    pack = Package.from_folder(Path(os.getcwd()))
+    pack = Package.from_folder(manager.cwd)
     if not pack:
         debug.error(f"Please make sure this is a package!")
         return
@@ -147,7 +148,7 @@ def package_init():
 @package_command.register("publish")
 def upload_package():
     '''Uploads a package over to the server.'''
-    pack = Package.from_folder(Path(os.getcwd()))
+    pack = Package.from_folder(manager.cwd)
     if pack is None:
         debug.error("Not a valid package! run `pyu init` to make it one.")
         return
@@ -180,10 +181,10 @@ def clean(confirm: bool = False):
             debug.info(f"Removed package {package.name}")
 
 @manager.register("uninstall")
-def uninstall(package: str, local: bool = False,force: bool = False, keep_depends: bool = False):
+def uninstall(package: str,force: bool = False, keep_depends: bool = False):
     '''Uninstalls a package'''
     debug.info('Searching for package...')
-    O = (p if local else None)
+    O = (p if manager.globals.local else None)
     pack = Package.find(package, O)
     if not pack:
         debug.error(f"Could not find package {package}!")
@@ -194,7 +195,7 @@ def uninstall(package: str, local: bool = False,force: bool = False, keep_depend
     
 @manager.register("test", "command", private=True)
 def test_command(package: Annotated[str, "Package"]):
-    inst=(Path(os.getcwd()) / "tmp")
+    inst=(manager.cwd / "tmp")
     if inst.exists():
         shutil.rmtree(inst)
     inst.mkdir(exist_ok=True)
