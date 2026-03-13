@@ -21,6 +21,11 @@ package_command = manager.group("package")
 def before(ctx: ctx.CommandContext):
     manager.globals.install = manager.cwd if manager.globals.local else None
 
+@manager.exception(Exception)
+def on(ctx: ctx.CommandContext, exp: Exception):
+    debug.error(f"{type(exp).__name__}: {exp}")
+    return False
+exp.__name__
 @manager.register("install")
 def install(package: str):
     '''Installs a package.'''
@@ -204,5 +209,8 @@ def test_command(package: Annotated[str, "Package"]):
     time.sleep(5)
     p.remove()
 
+@manager.register("test", "exception")
+def test_exception():
+    raise ValueError("Test Exception")
 if __name__ == "__main__":
     manager.process_commands()

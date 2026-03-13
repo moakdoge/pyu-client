@@ -7,5 +7,3 @@ class CommandContext:
     command: str
     args: argparse.Namespace
     func: Any
-    return_code: int | None = None
-    

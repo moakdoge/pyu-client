@@ -35,6 +35,7 @@ class CommandManager:
         self.globals = SimpleNamespace()
         self._global_parser =  argparse.ArgumentParser(add_help=False)
         self._global_names = set()
+        self._exception_handlers: dict[Exception, function] = {}
         
         #manually adding the ability to add --path
         self._global_parser.add_argument(f"--path", type=Path)
@@ -48,6 +49,16 @@ class CommandManager:
         self._global_parser.add_argument(f"--{argument_name}", default=default, *args, **kwargs)
         self._global_names.add(argument_name)
 
+    def exception(self, *exceptions: Exception):
+        '''NOTE: return True to mask the exception, return FALSE to let it raise.'''
+        def decorator(fn):
+            for exp in exceptions:
+                if exp in self._exception_handlers:
+                    raise TypeError(f"Please only provide one exception handler per exception type!")
+                self._exception_handlers[exp] = fn
+            return fn
+        return decorator
+                    
     def register(self, cmd: str, subcmd: str | None = None, aliases: list[str] | None = None, private: bool = False):
         def decorator(fn):
             
@@ -107,6 +118,7 @@ class CommandManager:
 
             return fn
         return decorator
+    
     def process_commands(self, argv: list | None = None) -> int:
         args = self._parser.parse_args(argv or sys.argv[1:])
         self.cwd = args.path or Path(os.getcwd()).resolve()
@@ -128,8 +140,7 @@ class CommandManager:
             for name in inspect.signature(fn).parameters:
                 params.append(getattr(args, name))
             try:
-                __back = fn
-                _ = fn
+                final = fn
                 ctx = ct.CommandContext(command=args.command, args=args, func=fn)
                 for before in self._before:
                     if hasattr(before, "_cmds"):
@@ -138,33 +149,34 @@ class CommandManager:
                                 continue
                     returned = before(ctx)
                     if returned is not None:
-                        _ = returned
+                        final = returned
                 try:
-                    if _ != fn:
-                        r= _(*params)
-                    else:
-                        r= fn(*params)
-                except CommandException as e:
-                    r = e.code
-                try:
-                    if r is None:
-                        ctx.return_code = 0
-                    else:
-                        ctx.return_code= int(r)
-                except ValueError:
-                    raise ValueError(f"Return must be either None or int!")
+                    final(*params)
+                except Exception as e:
+                    handler = None
+                    best_depth = -1
 
-                
+                    for exp, fn in self._exception_handlers.items():
+                        if isinstance(e, exp):
+                            depth = len(exp.mro())
+                            if depth > best_depth:
+                                best_depth = depth
+                                handler = fn
+
+                    if handler:
+                        should_raise = handler(ctx, e) # type: ignore
+                        if should_raise:
+                            raise
+                    else:
+                        raise
+
                 for after in self._after:
-                    
-                    
                     if hasattr(after, "_cmds") and after._cmds and len(after._cmds) > 0:
                         if args.command not in after._cmds and (args.command, getattr(args, "subcommand", None)) not in after._cmds:
                             continue
 
                     aftered = after(ctx)
 
-                return ctx.return_code
             
             except KeyboardInterrupt:
                 pass
