@@ -133,8 +133,9 @@ class CommandManager:
                 ctx = ct.CommandContext(command=args.command, args=args, func=fn)
                 for before in self._before:
                     if hasattr(before, "_cmds"):
-                        if args.command not in before._cmds and (args.command, getattr(args, "subcommand", None)) not in before._cmds:
-                            continue
+                        if len(before._cmds) > 0:
+                            if args.command not in before._cmds and (args.command, getattr(args, "subcommand", None)) not in before._cmds:
+                                continue
                     returned = before(ctx)
                     if returned is not None:
                         _ = returned
@@ -153,8 +154,11 @@ class CommandManager:
                 except ValueError:
                     raise ValueError(f"Return must be either None or int!")
 
+                
                 for after in self._after:
-                    if hasattr(after, "_cmds") and after._cmds:
+                    
+                    
+                    if hasattr(after, "_cmds") and after._cmds and len(after._cmds) > 0:
                         if args.command not in after._cmds and (args.command, getattr(args, "subcommand", None)) not in after._cmds:
                             continue
 

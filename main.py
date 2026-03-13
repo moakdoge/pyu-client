@@ -15,17 +15,18 @@ manager = commands.CommandManager("pyu")
 manager.add_global("local", default=False, action="store_true")
 
 #global shit
-
 package_command = manager.group("package")
 
+@manager.before_command()
+def before(ctx: ctx.CommandContext):
+    manager.globals.install = manager.cwd if manager.globals.local else None
 
 @manager.register("install")
 def install(package: str):
     '''Installs a package.'''
     
     with console.status(status=f"Installing {package}...", spinner="dots"):
-        result = p if manager.globals.local else None
-        pack = Package(package=package, root=result)
+        pack = Package(package=package, root=manager.globals.install)
         if pack.exists:
             debug.error(f"Package {package} is already installed!")
             return
@@ -43,9 +44,8 @@ def update(package: str, pip: bool = False):
     global p
     '''Updates a specific package.'''
     with console.status(status=f"Updating package {package}..", spinner="dots") as con:
-        result = p if manager.globals.local else None
         con.update(status=f"Updating package {package}")
-        pack = Package(package=package, root=result)
+        pack = Package(package=package, root=manager.globals.install)
         if not pack.exists:
             debug.error(f"Package {package} is not installed!")
             return
@@ -67,8 +67,7 @@ def update(package: str, pip: bool = False):
 @manager.register("info")
 def info(package: str):
     #attempt to find package
-    result = p if manager.globals.local else None
-    pack=Package(package, root=result)
+    pack=Package(package, root=manager.globals.install)
     if not pack.exists:
         debug.error("Package not found!")
         return
@@ -106,10 +105,10 @@ def package_bump():
 @package_command.register("init")
 def package_init():
     '''Creates a brand new package in the current directory.'''
-    if not (p / "__init__.py").exists():
+    if not ( manager.cwd / "__init__.py").exists():
         debug.error("Please make sure you run this command inside a python module!")
         return
-    if (p / "metadata.json").exists():
+    if (manager.cwd / "metadata.json").exists():
         cont = inp.ask("Are you sure you would like to overwrite this project? All settings will be lost!", preferred=False)
         if not cont:
             return
@@ -132,7 +131,7 @@ def package_init():
     if author == "":
         author = "N/A"
     descr = input("Description:")
-    with open(p / "metadata.json", "w") as m:
+    with open(manager.cwd / "metadata.json", "w") as m:
         l = json.dumps({
             "name": real_name,
             "version": ver,
@@ -184,8 +183,7 @@ def clean(confirm: bool = False):
 def uninstall(package: str,force: bool = False, keep_depends: bool = False):
     '''Uninstalls a package'''
     debug.info('Searching for package...')
-    O = (p if manager.globals.local else None)
-    pack = Package.find(package, O)
+    pack = Package.find(package, manager.globals.install)
     if not pack:
         debug.error(f"Could not find package {package}!")
         return
@@ -195,6 +193,7 @@ def uninstall(package: str,force: bool = False, keep_depends: bool = False):
     
 @manager.register("test", "command", private=True)
 def test_command(package: Annotated[str, "Package"]):
+    print(manager.cwd, manager.globals.install)
     inst=(manager.cwd / "tmp")
     if inst.exists():
         shutil.rmtree(inst)
