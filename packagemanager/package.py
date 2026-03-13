@@ -5,7 +5,7 @@ import tempfile
 import time
 import zipfile, hashlib
 
-from version import PackageVersion
+from pyu_version import PackageVersion
 from . import package_data
 from .package_data import PackageMetadata
 from . import urlfinder
@@ -18,11 +18,18 @@ class Package:
             root = site_packages
         raw = requests.get(urlfinder.get_url() + f"/packages/{package}")
         if not raw.ok:
-            raw.raise_for_status()
-        self._hash = raw.json()["hash"]
+            #raw.raise_for_status()
+            raw = json.loads((root / package/ "metadata.json").read_text())
+        else:
+            raw=raw.json()
+        self._hash = raw.get("hash", None)
         if version is None:
-            version = PackageVersion.from_str(raw.json()["version"])
-        raw = requests.get(urlfinder.get_url() + f"/packages/{package}/{version}").json()
+            version = PackageVersion.from_str(raw["version"])
+
+        try:
+            raw = requests.get(urlfinder.get_url() + f"/packages/{package}/{version}").json()
+        except Exception:
+            raw = json.loads((root / package/ "metadata.json").read_text())
         if isinstance(version, str):
             version = PackageVersion.from_str(version)
 
@@ -161,6 +168,7 @@ class Package:
                 if file.is_file():
                     z.write(file, file.relative_to(self.path))
         buffer.seek(0)
+        print(urlfinder.get_url() + "/upload")
         send = requests.post(
             url=urlfinder.get_url() + "/upload",
             files={"file": ("package.zip", buffer)}

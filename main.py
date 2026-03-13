@@ -211,7 +211,7 @@ def test_command(package: Annotated[str, "Package"]):
 
 @manager.register("test", "version")
 def test_version(version: str, operator: str, version2: str):
-    from version import PackageVersion
+    from pyu_version import PackageVersion
     v = PackageVersion.from_str(version)
     v2 = PackageVersion.from_str(version2)
     match operator:
@@ -232,5 +232,20 @@ def test_version(version: str, operator: str, version2: str):
 @manager.register("test", "exception")
 def test_exception():
     raise ValueError("Test Exception")
+
+@manager.register("test", "logging")
+def test_logging():
+    from rich.table import Table
+    debug.info("testing info")
+    debug.warning("testing warn")
+    debug.error("testing error")
+    debug.info(f"quotation 'testing quotes'")
+    debug.info(f"1.0, 1")
+    debug.info(f'hey this is a `code block`')
+    debug.info("https://www.google.com")
+    t=Table(title="hi")
+    t.add_row("test")
+    debug.info(t)
+
 if __name__ == "__main__":
     manager.process_commands()
