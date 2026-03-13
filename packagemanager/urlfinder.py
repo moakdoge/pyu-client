@@ -18,7 +18,7 @@ def _check(link):
         return
 
     try:
-        r = requests.get(link + "/package-list", timeout=0.5)
+        r = requests.get(link + "/", timeout=0.5)
         with _lock:
             if url is None:
                 url = link

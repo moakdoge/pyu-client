@@ -22,4 +22,5 @@ class PackageMetadata:
             "author": str(self.author),
             "description": "",
             "depends": n,
+            "language": "python"
         }
