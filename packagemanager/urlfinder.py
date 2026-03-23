@@ -2,6 +2,7 @@ import threading
 import requests
 
 __URLS = [
+    "http://0.0.0.0:5000/",
     "http://127.0.0.1:5000",
     "http://192.168.0.24:5000",
     "http://moakdoge-laptop.local:5000"

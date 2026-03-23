@@ -168,9 +168,8 @@ class Package:
                 if file.is_file():
                     z.write(file, file.relative_to(self.path))
         buffer.seek(0)
-        print(urlfinder.get_url() + "/upload")
         send = requests.post(
-            url=urlfinder.get_url() + "/upload",
+            url=urlfinder.get_url() + "upload",
             files={"file": ("package.zip", buffer)}
         )
         return send

@@ -38,7 +38,7 @@ class CommandManager:
         self._exception_handlers: dict[type[Exception], function] = {}
         
         #manually adding the ability to add --path
-        self._global_parser.add_argument(f"--path", type=Path)
+        self._global_parser.add_argument(f"--path", type=Path, default=None)
         self.cwd: Path
         
     def group(self, group_name: str) -> CommandGroup:
@@ -47,7 +47,9 @@ class CommandManager:
 
     def add_global(self, argument_name: str, default:Any= None, *args, **kwargs):
         self._global_parser.add_argument(f"--{argument_name}", default=default, *args, **kwargs)
+        self._parser.add_argument("--local", default=False, action="store_true")
         self._global_names.add(argument_name)
+        
 
     def exception(self, *exceptions: type[Exception]):
         '''NOTE: return True to mask the exception, return FALSE to let it raise.'''
@@ -121,7 +123,7 @@ class CommandManager:
     
     def process_commands(self, argv: list | None = None) -> int:
         args = self._parser.parse_args(argv or sys.argv[1:])
-        self.cwd = args.path or Path(os.getcwd()).resolve()
+        self.cwd = getattr(args, "path", None) or Path(os.getcwd()).resolve()
         os.environ["CommandManagerCalled"] = "1"
         for name in self._global_names:
             setattr(self.globals, name, getattr(args, name))

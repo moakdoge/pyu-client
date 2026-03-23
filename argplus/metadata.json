@@ -1,9 +1,10 @@
 {
   "name": "argplus",
-  "version": "1.4.13",
+  "version": "1.4.14",
   "author": "moakdoge",
   "description": "",
   "depends": {
     "libmk": "1.0.0"
-  }
+  },
+  "language": "python"
 }
