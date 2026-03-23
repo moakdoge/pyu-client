@@ -3,7 +3,7 @@ import argparse, requests, tempfile, zipfile, shutil, os, time,sys
 import io
 import json
 from pathlib import Path
-from argplus import commands, ctx
+from argplus import commands, ctx, custom
 from typing import Annotated
 from loggingplus import *
 from inputplus import inp
@@ -91,17 +91,14 @@ def list_packages():
     debug.info("\n".join(lines))
 
 @package_command.register("bump")
-def package_bump():
+def package_bump(type: Annotated[str, custom.ChoiceAnnotation("Type of bump", choices=["epoch", "major", "minor", "patch", "tag", "pre-release"])] = "patch"):
     '''Ups the version of the current package up by one. For example, 1.2.3 -> 1.2.4'''
-    
     pack = Package.from_folder(manager.cwd)
     if not pack:
         debug.error(f"Please make sure this is a package!")
         return
-    
     old = pack.version
-    new = pack.version.bump()
-        
+    new = pack.version.bump(type=type)
     debug.info(f"Version: {old} -> {new}")
     pack._metadata.version = new
     pack.save()

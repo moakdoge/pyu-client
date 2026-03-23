@@ -3,9 +3,9 @@ import requests
 
 __URLS = [
     "http://0.0.0.0:5000/",
-    "http://127.0.0.1:5000",
-    "http://192.168.0.24:5000",
-    "http://moakdoge-laptop.local:5000"
+    "http://127.0.0.1:5000/",
+    "http://192.168.0.24:5000/",
+    "http://moakdoge-laptop.local:5000/"
 ]
 
 url = None
@@ -19,7 +19,7 @@ def _check(link):
         return
 
     try:
-        r = requests.get(link + "/", timeout=0.5)
+        r = requests.get(link + "/", timeout=0.1)
         with _lock:
             if url is None:
                 url = link

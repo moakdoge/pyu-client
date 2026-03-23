@@ -12,30 +12,43 @@ from . import urlfinder
 import requests, shutil, sys
 site_packages = Path(next(x for x in sys.path if "packages" in x))
 class Package:
-    def __init__(self, package: str, version: PackageVersion | str | None = None, root: Path | None = site_packages) -> None:
+    def __init__(self, package: str, version: PackageVersion | str | None = None, root: Path | None = site_packages, local: bool = False) -> None:
         self._package = package
+        raw = None
         if not root:
             root = site_packages
-        raw = requests.get(urlfinder.get_url() + f"/packages/{package}")
-        if not raw.ok:
-            #raw.raise_for_status()
-            raw = json.loads((root / package/ "metadata.json").read_text())
-        else:
+
+        if isinstance(version, str):
+            version = PackageVersion.from_str(version)
+        
+        valid = False
+        if isinstance(version, PackageVersion) and not local:
+            raw = requests.get(urlfinder.get_url() + f"/packages/{package}/{version}")
+            raw = raw.json()
+            valid = True
+
+
+        #check if we want to attempt to get the metadata; if local is enabled DO NOT TRY!   
+        if not local and not valid:
+            raw = requests.get(urlfinder.get_url() + f"/packages/{package}")
             raw=raw.json()
+            valid = True
+        elif not valid:
+            raw = json.loads((root / package/"metadata.json").read_text())
+
+
+        if raw is None:
+            raise FileNotFoundError(f"Package {package} not found!")
+            
+
         self._hash = raw.get("hash", None)
         if version is None:
             version = PackageVersion.from_str(raw["version"])
 
-        try:
-            raw = requests.get(urlfinder.get_url() + f"/packages/{package}/{version}").json()
-        except Exception:
-            raw = json.loads((root / package/ "metadata.json").read_text())
-        if isinstance(version, str):
-            version = PackageVersion.from_str(version)
-
-        n: list[Package] = []
+        depds: list[Package] = []
         for _pk, _version in raw.get("depends", {}).items():
-            n.append(Package(package=_pk, version=_version, root=root))
+            depds.append(Package(package=_pk, version=_version, root=root, local=local))
+
         _versions=[PackageVersion.from_str(v) for v in raw.get("versions", [])]
         _versions.sort(reverse=True)
         meta = PackageMetadata(
@@ -43,7 +56,7 @@ class Package:
             version=version,
             author=raw.get("author", "N/A"),
             description=raw.get("description", "N/A"),
-            depends=n,
+            depends=depds,
             versions=_versions,
             path=(root / package)
         )
@@ -55,7 +68,7 @@ class Package:
             raise FileNotFoundError
         if (folder / "metadata.json").exists():
             loaded = json.loads((folder / "metadata.json").read_text())
-            return cls(loaded["name"], root=folder.parent)
+            return cls(loaded["name"], root=folder.parent, local=True)
         #self._version = version if not isinstance(version, PackageVersion) else PackageVersion.from_str(version)
     
     @staticmethod
@@ -94,8 +107,8 @@ class Package:
 
     def install(self, dependencies:bool=True) -> Path:
         by = self.download()
-#        if hashlib.md5(by).hexdigest() != self.hash:
-#            raise Exception(f"File failed checksum check!")
+        if hashlib.md5(by).hexdigest() != self.hash:
+            raise Exception(f"File failed checksum check!")
         b  = io.BytesIO(by)
         if dependencies:
             self._install_dependencies()

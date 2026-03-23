@@ -5,7 +5,7 @@ _CACHED = re.compile(
 )
 
 
-_ALLOWED_TAGS = ["rc", "b", "a", ".dev"][::-1]
+_ALLOWED_TAGS = ["rc", "b", "a", "dev"][::-1]
 
 @dataclass()
 class PackageVersion:
@@ -26,7 +26,9 @@ class PackageVersion:
     def __str__(self):
         base = f"{self.major}.{self.minor}.{self.patch}"
         t=self.tag_version if self.tag_version else ""
-        return base + self.tag + str(t) if self.tag else base
+        p1=base + "-" + self.tag + str(t) if self.tag else base
+        p0 = f"{self.epoch}!" if self.epoch > 0 else ""
+        return p0 + p1
     
     def __lt__(self, other):
         if isinstance(other, str):
@@ -74,19 +76,50 @@ class PackageVersion:
         return cls(major, minor, patch, tag=tag, epoch=epoch, tag_version=tag_version)
 
         
-    def bump(self):
+    def bump(self, type: str = "patch"):
+        epoch = int(self.epoch)
         part1 = int(self.major)
         part2 = int(self.minor)
         part3 = int(self.patch)
-        
-        part3 += 1
+        tag_version = int(self.tag_version)
+        tag = self.tag
+        match type:
+            case "epoch":
+                epoch += 1
+            case "patch":
+                part3 += 1
+            case "minor":
+                part3 = 0
+                part2 += 1
+            case "major":
+                part3 = 0
+                part2 = 0
+                part1 += 1
+            case "tag":
+                tag_version = 0
+
+                if tag not in _ALLOWED_TAGS:
+                    tag = _ALLOWED_TAGS[0]
+
+                if  _ALLOWED_TAGS.index(tag)+1 == len(_ALLOWED_TAGS):
+                    tag = ""
+                    part3 += 1
+                
+                else:
+                    tag = _ALLOWED_TAGS[_ALLOWED_TAGS.index(tag) + 1]
+            case "pre-release":
+                if tag not in _ALLOWED_TAGS:
+                    raise TypeError(f"`pre-release` bump is not possible unless you have a tag!")
+                tag_version += 1
+            case _:
+                raise TypeError(f"Unknown bump type!")
         if part3 >= 100:
             part3 = 0
             part2 += 1
             if part2 >= 100:
                 part2 = 0
                 part1 += 1
-        return PackageVersion(major=part1, minor=part2, patch=part3, tag=self.tag)
+        return PackageVersion(major=part1, minor=part2, patch=part3, tag=tag, tag_version=tag_version, epoch=epoch)
     
     @property
     def tuple(self):

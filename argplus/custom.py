@@ -59,3 +59,16 @@ class ExistPath:
             raise argparse.ArgumentTypeError("Path must exist")
 
         return p
+    
+
+class ChoiceAnnotation(BaseAnnotation):
+    BASE_TYPE = str
+    def __init__(self, description: str = "", choices: list[str] = []) -> None:
+        self._choices = choices
+        super().__init__(description)
+    def __str__(self) -> str:
+        return f"ALLOWED: ({",".join(self._choices)})"
+    def __call__(self, value) -> Any:
+        if value not in self._choices:
+            raise argparse.ArgumentTypeError(f"Value not allowed: {value}")
+        return value
