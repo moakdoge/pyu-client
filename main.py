@@ -7,6 +7,7 @@ from argplus import commands, ctx, custom
 from typing import Annotated
 from loggingplus import *
 from inputplus import inp
+from packagemanager import urlfinder
 from packagemanager.package import Package
 
 
@@ -82,7 +83,26 @@ def info(package: str):
     \nMD5 hash: {pack.hash}''')
 
 @manager.register("list")
-def list_packages():
+def list_packages(server: bool = False):
+    
+    if server:
+        packages = requests.get(urlfinder.get_url() + "/packages/list?amount=9999999999")
+        if packages.ok:
+            found = packages.json()
+            lines = [f"Total packages installed: {len(found)}", "--------------------"]
+            
+            for package in found:
+                name = package["name"]
+                author = package["author"]
+                description = package["description"]
+                version = package["version"]
+                
+                lines.append(f"{name} (@{author}) - {version}")
+                lines.append(f'\t"{description}"')
+            
+            debug.info("\n".join(lines))
+            return
+            
     packs = Package.find_all()
     lines = [f"Total packages installed: {len(packs)}", "--------------------"]
     for package in packs:
