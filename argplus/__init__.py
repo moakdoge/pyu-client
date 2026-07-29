@@ -1,0 +1,1 @@
+'''A simple arg managing library.'''

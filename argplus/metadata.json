@@ -1,8 +1,8 @@
 {
   "name": "argplus",
-  "version": "5!2.3.27-a5",
+  "version": "5!2.3.37-a5",
   "author": "N/A",
-  "description": "",
+  "description": "A library for arg parsing. V1.",
   "depends": {},
   "language": "python"
 }

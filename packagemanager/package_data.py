@@ -20,7 +20,7 @@ class PackageMetadata:
             "name": self.name,
             "version": str(self.version),
             "author": str(self.author),
-            "description": "",
+            "description": self.description,
             "depends": n,
             "language": "python"
         }

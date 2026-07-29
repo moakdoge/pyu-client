@@ -117,6 +117,7 @@ def package_bump(type: Annotated[str, custom.ChoiceAnnotation("Type of bump", ch
     if not pack:
         debug.error(f"Please make sure this is a package!")
         return
+    
     old = pack.version
     new = pack.version.bump(type=type)
     debug.info(f"Version: {old} -> {new}")
