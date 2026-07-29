@@ -89,7 +89,7 @@ def list_packages(server: bool = False):
         packages = requests.get(urlfinder.get_url() + "/packages/list?amount=9999999999")
         if packages.ok:
             found = packages.json()
-            lines = [f"Total packages installed: {len(found)}", "--------------------"]
+            lines = [f"Total packages found: {len(found)}", "--------------------"]
             
             for package in found:
                 name = package["name"]

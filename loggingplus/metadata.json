@@ -1,0 +1,8 @@
+{
+  "name": "loggingplus",
+  "version": "1.0.0",
+  "author": "moakdoge",
+  "depends": {},
+  "description": "A very simple package designed to go on top of rich",
+  "language": "python"
+}
