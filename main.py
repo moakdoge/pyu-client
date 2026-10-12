@@ -13,7 +13,6 @@ from inputplus import inp
 #handle arguments
 manager = commands.CommandManager("pyu")
 p = Path(os.getcwd())
-#global shit
 site_packages = Path(next(x for x in sys.path if "packages" in x))
 deb = manager.group("package")
 
